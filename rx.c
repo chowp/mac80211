@@ -374,6 +374,14 @@ ieee80211_add_rx_radiotap_header(struct ieee80211_local *local,
 		*pos++ = status->chain_signal[chain];
 		*pos++ = chain;
 	}
+
+	/* fill the packet info and put it into the store*/
+	current_index = (current_index + 1)%HOLD_TIME;
+	store[current_index].wlan_src = ?;
+	store[current_index].wlan_dst = ?;
+	store[current_index].phy_rate = ?;
+	store[current_index].len = ?;
+	store[current_index].timestamps = ?;
 }
 
 /*
