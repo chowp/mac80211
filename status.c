@@ -857,6 +857,13 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 	ieee80211_add_tx_radiotap_header(local, sband, skb, retry_count,
 					 rtap_len, shift);
 
+	/*wing get the packet info*/
+	parse_radiotap_header(skb->data,ppp);
+	ppp.len = skb->len;
+	ppp.tv.tv_sec = skb->tstamp/NUM_NANO_PER_SECOND;
+	ppp.tv.tv_usec = skb->tstamp%NUM_NANO_PER_SECOND;
+	cal_inf(ppp);
+	/*wing get the packet info ends*/
 	/* XXX: is this sufficient for BPF? */
 	skb_set_mac_header(skb, 0);
 	skb->ip_summed = CHECKSUM_UNNECESSARY;

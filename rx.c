@@ -144,6 +144,7 @@ ieee80211_add_rx_radiotap_header(struct ieee80211_local *local,
 	u16 rx_flags = 0;
 	u16 channel_flags = 0;
 	int mpdulen, chain;
+	u64 pch_timestamp = 0;
 	unsigned long chains = status->chains;
 
 	mpdulen = skb->len;
@@ -194,6 +195,7 @@ ieee80211_add_rx_radiotap_header(struct ieee80211_local *local,
                 //kt = timespec_to_ktime(ts);
                 //put_unaligned_le64((u64)kt.tv64,pos);
 		u64 test = (u64)(ts.tv_sec)*(u64)(1000000000)+(u64)ts.tv_nsec;
+		pch_timestamp = test;
         	put_unaligned_le64(test,pos);
                 
 		rthdr->it_present |= cpu_to_le32(1 << IEEE80211_RADIOTAP_TSFT);
@@ -377,11 +379,10 @@ ieee80211_add_rx_radiotap_header(struct ieee80211_local *local,
 
 	/* fill the packet info and put it into the store*/
 	current_index = (current_index + 1)%HOLD_TIME;
-	store[current_index].wlan_src = ?;
-	store[current_index].wlan_dst = ?;
-	store[current_index].phy_rate = ?;
-	store[current_index].len = ?;
-	store[current_index].timestamps = ?;
+	parse_80211_header(skb->data,store[current_index]);
+	store[current_index].phy_rate = rate->bitrate;
+	store[current_index].len = skb->len;
+	store[current_index].timestamps = pch_timestamp;
 }
 
 /*
