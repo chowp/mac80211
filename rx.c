@@ -30,7 +30,7 @@
 #include "tkip.h"
 #include "wme.h"
 #include "rate.h"
-
+#include "hello.h"
 /*
  * monitor mode reception
  *

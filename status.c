@@ -21,6 +21,7 @@
 #include "mesh.h"
 #include "led.h"
 #include "wme.h"
+#include "hello.h"
 /*add by peichanghua*/
 uint64_t htonll(uint64_t val) {
     return (((uint64_t) htonl(val)) << 32) + htonl(val >> 32);
