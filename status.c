@@ -336,7 +336,7 @@ ieee80211_add_tx_radiotap_header(struct ieee80211_local *local,
         /* the order of the following fields is important */
         struct timespec ts;
         getnstimeofday(&ts);
-        ktime_t kt = timespec_to_ktime(ts);
+        //ktime_t kt = timespec_to_ktime(ts);
         //put_unaligned_le64(kt.tv64,pos);
         /* add by peichanghua begin */
       //  printk(KERN_DEBUG "hello peichanghua %llx status.c,add header,ktime llx\n",kt.tv64);
@@ -859,11 +859,11 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 					 rtap_len, shift);
 
 	/*wing get the packet info*/
-	parse_radiotap_header(skb->data,ppp);
+	parse_radiotap_header(skb->data,&ppp);
 	ppp.len = skb->len;
-	ppp.tv.tv_sec = skb->tstamp/NUM_NANO_PER_SECOND;
-	ppp.tv.tv_usec = skb->tstamp%NUM_NANO_PER_SECOND;
-	cal_inf(ppp);
+	ppp.tv.tv_sec = ktime_to_timespec(skb->tstamp).tv_sec;
+	ppp.tv.tv_usec = ktime_to_timespec(skb->tstamp).tv_nsec;
+	cal_inf(&ppp);
 	/*wing get the packet info ends*/
 	/* XXX: is this sufficient for BPF? */
 	skb_set_mac_header(skb, 0);
