@@ -1,5 +1,5 @@
 #include "hello.h"
-
+#include <stdlib.h>
 /* rate in 100kbps */
 int
 rate_to_index(int rate)

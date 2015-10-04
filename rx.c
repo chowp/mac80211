@@ -378,12 +378,13 @@ ieee80211_add_rx_radiotap_header(struct ieee80211_local *local,
 	
 	/*add by peichanghua*/
 	/* fill the packet info and put it into the store*/
-	current_index = (current_index + 1)%HOLD_TIME;
+	current_index = ( (current_index)%HOLD_TIME + 1)%HOLD_TIME;
 	parse_80211_header(skb->data,&store[current_index]);
 	store[current_index].phy_rate = rate->bitrate;
 	store[current_index].len = skb->len;
 	store[current_index].timestamp = pch_timestamp;
-	/*add by peichanghua ends*/
+	printk(KERN_DEBUG "rx.c:index=%d,phy_rate=%f,len=%d,timestamp=%llf\n",current_index,store[current_index].phy_rate,store[current_index].len,store[current_index].timestamp);	
+/*add by peichanghua ends*/
 }
 
 /*

@@ -863,7 +863,8 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 	ppp.len = skb->len;
 	ppp.tv.tv_sec = ktime_to_timespec(skb->tstamp).tv_sec;
 	ppp.tv.tv_usec = ktime_to_timespec(skb->tstamp).tv_nsec;
-	cal_inf(&ppp);
+        printk(KERN_DEBUG "status.c:phy_rate=%f,len=%d,sec=%ld,usec=%ld\n",ppp.phy_rate,ppp.len,ppp.tv.tv_sec,ppp.tv.tv_usec);
+	//cal_inf(&ppp);
 	/*wing get the packet info ends*/
 	/* XXX: is this sufficient for BPF? */
 	skb_set_mac_header(skb, 0);

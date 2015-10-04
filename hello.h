@@ -1,13 +1,9 @@
 #ifndef HELLO_H
 #define HELLO_H
-#include <byteswap.h>
-#define le64toh(x) bswap_64(x)
-#define le32toh(x) bswap_32(x)
-#define le16toh(x) bswap_16(x)
 
 #define tolower(c)     c - 'A' + 'a'
 #define MAC_LEN			6
-#define HOLD_TIME       1000
+#define HOLD_TIME       100
 #define CS_NUMBER       100
 #define CONST_TIME_24   0.000070
 #define CONST_TIME_5    0.000076    //50+16+32Byte*8/24Mbps   
@@ -27,7 +23,7 @@ static char mac_ffff[12] = "FFFFFFFFFFFF";
 static int inf_end_timestamp = 0;
 static int inf_start_timestamp = 0;
 
-static int FREQUENT_UPDATE_PERIOD_SECONDS;
+static int FREQUENT_UPDATE_PERIOD_SECONDS = 10;
 struct inf_info {
 	unsigned char wlan_src[MAC_LEN];
 	unsigned char wlan_dst[MAC_LEN];
@@ -73,7 +69,7 @@ struct packet_info {
 
 /*global struct*/
 extern struct packet_info store[HOLD_TIME];
-extern int current_index;
+extern int current_index ;
 extern struct inf_info cs[CS_NUMBER]; /* used to store cs info in time gamma */
 extern struct summary_info summary;
 extern struct packet_info last_p;
