@@ -1,5 +1,16 @@
+#include <net/ieee80211_radiotap.h>
+#include <linux/ieee80211.h>
+#include <ctype.h>
 #include "hello.h"
-#include <stdlib.h>
+//#include <time.h>
+
+struct packet_info store[HOLD_TIME];
+int current_index = 0 ;
+struct inf_info cs[CS_NUMBER]; /* used to store cs info in time gamma */
+struct summary_info summary;
+struct packet_info last_p;
+struct packet_info ppp;
+float ht = 0.0;
 /* rate in 100kbps */
 int
 rate_to_index(int rate)
@@ -292,7 +303,7 @@ int parse_80211_header(const unsigned char * buf,  struct packet_info* p)
         return hdrlen;
 
 }
-static int
+int
 parse_radiotap_header(unsigned char * buf,  struct packet_info* p)
 {
         struct ieee80211_radiotap_header* rh;
