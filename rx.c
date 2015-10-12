@@ -30,7 +30,9 @@
 #include "tkip.h"
 #include "wme.h"
 #include "rate.h"
+/*add by wing project*/
 #include "hello.h"
+/*add by wing project ends*/
 /*
  * monitor mode reception
  *
@@ -376,14 +378,18 @@ ieee80211_add_rx_radiotap_header(struct ieee80211_local *local,
 		*pos++ = chain;
 	}
 	
-	/*add by peichanghua*/
+	/*add by peichanghua, mobisys*/
 	/* fill the packet info and put it into the store*/
-	current_index = ( (current_index)%HOLD_TIME + 1)%HOLD_TIME;
-	parse_80211_header(skb->data,&store[current_index]);
+	if (current_index == HOLD_TIME){
+		current_index = 0;
+	}else{
+		current_index = current_index + 1;
+	}
+	//parse_80211_header(skb->data,&store[current_index]);
 	store[current_index].phy_rate = rate->bitrate;
 	store[current_index].len = skb->len;
 	store[current_index].timestamp = pch_timestamp;
-	printk(KERN_DEBUG "rx.c:index=%d,phy_rate=%f,len=%d,timestamp=%llf\n",current_index,store[current_index].phy_rate,store[current_index].len,store[current_index].timestamp);	
+	//printk(KERN_DEBUG "rx.c:index=%d,phy_rate=%f,len=%d,timestamp=%llf\n",current_index,store[current_index].phy_rate,store[current_index].len,store[current_index].timestamp);	
 /*add by peichanghua ends*/
 }
 

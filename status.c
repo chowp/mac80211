@@ -21,8 +21,9 @@
 #include "mesh.h"
 #include "led.h"
 #include "wme.h"
+/*add by wing project*/
 #include "hello.h"
-/*add by peichanghua*/
+/*add by wing project ends*/
 uint64_t htonll(uint64_t val) {
     return (((uint64_t) htonl(val)) << 32) + htonl(val >> 32);
 }
@@ -275,7 +276,7 @@ static int ieee80211_tx_radiotap_len(struct ieee80211_tx_info *info)
 			len = ALIGN(len, 2) + 12;
 	}
 
-	return len+8;
+	return len;
 }
 
 static void
@@ -324,8 +325,8 @@ ieee80211_add_tx_radiotap_header(struct ieee80211_local *local,
 	rthdr->it_len = cpu_to_le16(rtap_len);
 	rthdr->it_present =
 		cpu_to_le32((1 << IEEE80211_RADIOTAP_TX_FLAGS) |
-			    (1 << IEEE80211_RADIOTAP_DATA_RETRIES)|
- 		            (1 << IEEE80211_RADIOTAP_TSFT));
+			    (1 << IEEE80211_RADIOTAP_DATA_RETRIES));
+ 		      //      (1 << IEEE80211_RADIOTAP_TSFT)); //comment by wing
 	pos = (unsigned char *)(rthdr + 1);
 	/*
 	 * XXX: Once radiotap gets the bitmap reset thing the vendor
@@ -346,8 +347,8 @@ ieee80211_add_tx_radiotap_header(struct ieee80211_local *local,
        // printk(KERN_DEBUG "hello peichanghua %ld status.c,add header,timespec \n",ts.tv_nsec);
         /* add by peichanghua end   */
         u64 test = (u64)(ts.tv_sec)*(u64)(1000000000)+(u64)ts.tv_nsec;
-        put_unaligned_le64(test,pos);
-        pos = pos + 8;
+       // put_unaligned_le64(test,pos);
+       // pos = pos + 8;
 	/* add by peichanghua end */
         /*add by peichanghua begin*/
         //seq = *((unsigned int*)iph);
@@ -858,13 +859,13 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 	ieee80211_add_tx_radiotap_header(local, sband, skb, retry_count,
 					 rtap_len, shift);
 
-	/*wing get the packet info*/
-	parse_radiotap_header(skb->data,&ppp);
+	/*wing get the packet info, mobisys*/
+	//parse_radiotap_header(skb->data,&ppp);
 	ppp.len = skb->len;
 	ppp.tv.tv_sec = ktime_to_timespec(skb->tstamp).tv_sec;
 	ppp.tv.tv_usec = ktime_to_timespec(skb->tstamp).tv_nsec;
-        printk(KERN_DEBUG "status.c:phy_rate=%f,len=%d,sec=%ld,usec=%ld\n",ppp.phy_rate,ppp.len,ppp.tv.tv_sec,ppp.tv.tv_usec);
-	//cal_inf(&ppp);
+        //printk(KERN_DEBUG "status.c:len=%d,sec=%ld,usec=%ld\n",ppp.len,ppp.tv.tv_sec,ppp.tv.tv_usec);
+	cal_inf(&ppp);
 	/*wing get the packet info ends*/
 	/* XXX: is this sufficient for BPF? */
 	skb_set_mac_header(skb, 0);
@@ -929,3 +930,6 @@ void ieee80211_purge_tx_queue(struct ieee80211_hw *hw,
 	while ((skb = __skb_dequeue(skbs)))
 		ieee80211_free_txskb(hw, skb);
 }
+
+
+

@@ -1,17 +1,27 @@
 #include <net/ieee80211_radiotap.h>
 #include <linux/ieee80211.h>
-#include <ctype.h>
 #include "hello.h"
 //#include <time.h>
+#define bool int
+#define true 1
+#define false 0
 
-struct packet_info store[HOLD_TIME];
+struct packet_info store[HOLD_TIME] = {0};
 int current_index = 0 ;
-struct inf_info cs[CS_NUMBER]; /* used to store cs info in time gamma */
-struct summary_info summary;
-struct packet_info last_p;
-struct packet_info ppp;
-float ht = 0.0;
+struct inf_info cs[CS_NUMBER] = {0}; /* used to store cs info in time gamma */
+struct summary_info summary= {0};
+struct packet_info last_p={0};
+struct packet_info ppp= {0};
+int ht = 0.0;
 /* rate in 100kbps */
+int tolower(char c){
+	if (c > 'A'){
+		return c-'A'-'a';
+	}else{
+		return c;
+	}
+}
+
 int
 rate_to_index(int rate)
 {
@@ -96,17 +106,15 @@ mcs_index_to_rate(int mcs, int ht20, int lgi)
         }
         return 0;
 }
-const char*
-ether_sprintf(const unsigned char *mac)
+void
+ether_sprintf(unsigned char mac[6], char output[13])
 {
-        static char etherbuf[13];
-        snprintf(etherbuf, sizeof(etherbuf), "%02x%02x%02x%02x%02x%02x",
+        snprintf(output, sizeof(output), "%02x%02x%02x%02x%02x%02x",
                 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-        return etherbuf;
 }
 
-const char*
-ether_sprintf2(const unsigned char *mac)
+char*
+ether_sprintf2(unsigned char *mac)
 {
         static char etherbuf2[13];
         snprintf(etherbuf2, sizeof(etherbuf2), "%02x%02x%02x%02x%02x%02x",
@@ -149,21 +157,20 @@ int ieee80211_get_hdrlen(u16 fc)
 
         return hdrlen;
 }
-
-const char*
+char*
 digest_sprintf16(const unsigned char *mac)
 {
-        static char etherbuf[33];
+        char etherbuf[33];
         snprintf(etherbuf, sizeof(etherbuf), "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
                 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],mac[6]
                 ,mac[7], mac[8], mac[9], mac[10], mac[11], mac[12],mac[13]
                 ,mac[14], mac[15]);
         return etherbuf;
 }
-const char*
+char*
 digest_sprintf30(const unsigned char *mac)
 {
-        static char etherbuf[61];
+        char etherbuf[61];
         snprintf(etherbuf, sizeof(etherbuf), "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
                 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],mac[6]
                 ,mac[7], mac[8], mac[9], mac[10], mac[11], mac[12],mac[13]
@@ -173,7 +180,7 @@ digest_sprintf30(const unsigned char *mac)
         return etherbuf;
 }
 
-int str_equal(const unsigned char *s1,const unsigned char *s2,int len){
+int str_equal(char *s1,char *s2,int len){
         int i ;
         for (i = 0; i < len ; i++)
         {
@@ -182,358 +189,72 @@ int str_equal(const unsigned char *s1,const unsigned char *s2,int len){
         }
         return 1;
 }
-int parse_80211_header(const unsigned char * buf,  struct packet_info* p)
-{
-
-        struct ieee80211_hdr* wh;
-        struct ieee80211_mgmt* whm;
-        int hdrlen = 0;
-        u8* sa = NULL;
-        u8* da = NULL;
-        u16 fc;
-        //u16 type;
-
-
-
-        wh = (struct ieee80211_hdr*)buf;
-        fc = le16toh(wh->frame_control);
-        //hdrlen = ieee80211_get_hdrlen(fc); //no need
-
-        p->wlan_type = (fc & (IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE));
-        //type = (fc & (IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE));
-
-        switch (p->wlan_type & IEEE80211_FCTL_FTYPE) {
-        case IEEE80211_FTYPE_DATA:
-                hdrlen = 24;
-                switch (p->wlan_type & IEEE80211_FCTL_STYPE) {
-                case IEEE80211_STYPE_NULLFUNC:
-                        break;
-                case IEEE80211_STYPE_QOS_DATA:
-                        hdrlen = 26;
-                        break;
-                }
-
-                p->wlan_nav = le16toh(wh->duration_id);
-
-                sa = ieee80211_get_SA(wh);
-                da = ieee80211_get_DA(wh);
-
-                if (fc & IEEE80211_FCTL_PROTECTED)
-                       hdrlen = 34;
-                if (fc & IEEE80211_FCTL_RETRY)
-                        p->wlan_retry = 1;
-
-                break;
-
-        case IEEE80211_FTYPE_CTL:
-                switch (p->wlan_type & IEEE80211_FCTL_STYPE) {
-                case IEEE80211_STYPE_RTS:
-                        p->wlan_nav = le16toh(wh->duration_id);
-                        sa = wh->addr2;
-                        da = wh->addr1;
-                        break;
-
-                case IEEE80211_STYPE_CTS:
-                        p->wlan_nav = le16toh(wh->duration_id);
-                        da = wh->addr1;
-                        break;
-
-                case IEEE80211_STYPE_ACK:
-                        p->wlan_nav = le16toh(wh->duration_id);
-                        da = wh->addr1;
-                        break;
-
-                case IEEE80211_STYPE_PSPOLL:
-                        sa = wh->addr2;
-                        break;
-
-                case IEEE80211_STYPE_CFEND:
-                case IEEE80211_STYPE_CFENDACK:
-                        da = wh->addr1;
-                        sa = wh->addr2;
-                        break;
-              case IEEE80211_STYPE_BACK_REQ:
-                case IEEE80211_STYPE_BACK:
-                        p->wlan_nav = le16toh(wh->duration_id);
-                        da = wh->addr1;
-                        sa = wh->addr2;
-                }
-                break;
-
-        case IEEE80211_FTYPE_MGMT:
-                //hdrlen = 24;
-                whm = (struct ieee80211_mgmt*)buf;
-                sa = whm->sa;
-                da = whm->da;
-                if (fc & IEEE80211_FCTL_RETRY)
-                        p->wlan_retry = 1;
-                switch ( p->wlan_type & IEEE80211_FCTL_STYPE) {
-                case IEEE80211_STYPE_BEACON:
-                case IEEE80211_STYPE_PROBE_RESP:
-/*              {
-                        if(debug == 1)
-                                printf("begin getting timestamp!\n");
-                        struct wlan_frame_beacon* bc = (struct wlan_frame_beacon*)((buf + 24));
-                        p->wlan_tsf = le64toh(bc->tsf);
-                        if(debug == 1)
-                                printf("find a beacon!!\n");
-                        break;
-                }*/
-                case IEEE80211_STYPE_PROBE_REQ:
-                case IEEE80211_STYPE_ASSOC_REQ:
-                case IEEE80211_STYPE_ASSOC_RESP:
-                case IEEE80211_STYPE_REASSOC_REQ:
-                case IEEE80211_STYPE_REASSOC_RESP:
-                case IEEE80211_STYPE_DISASSOC:
-                case IEEE80211_STYPE_AUTH:
-                case IEEE80211_STYPE_DEAUTH:
-                        break;
-                }
-                break;
-
-        }
-
-        if (sa != NULL) {
-                memcpy(p->wlan_src, sa, MAC_LEN);
-        }
-        if (da != NULL) {
-                memcpy(p->wlan_dst, da, MAC_LEN);
-        }
-
-        return hdrlen;
-
-}
-int
-parse_radiotap_header(unsigned char * buf,  struct packet_info* p)
-{
-        struct ieee80211_radiotap_header* rh;
-        __le32 present; /* the present bitmap */
-        unsigned char* b; /* current byte */
-        int i;
-        u16 rt_len, x;
-        unsigned char known, flags, ht20, lgi;
-
-        unsigned int pch_flags;
-
-
-        rh = (struct ieee80211_radiotap_header*)buf;
-        b = buf + sizeof(struct ieee80211_radiotap_header);
-        present = le32toh(rh->it_present);
-        rt_len = le16toh(rh->it_len);
-
-        /* check for header extension - ignore for now, just advance current position */
-        while (present & 0x80000000  && b - buf < rt_len) {
-                present = le32toh(*(__le32*)b);
-                b = b + 4;
-        }
-        present = le32toh(rh->it_present); // in case it moved
-        /* radiotap bitmap has 32 bit, but we are only interrested until
-         * bit 19 (IEEE80211_RADIOTAP_MCS) => i<20 */
-        for (i = 0; i < 20 && b - buf < rt_len; i++) {
-                if ((present >> i) & 1) {
-
-                        switch (i) {
-                                /* just ignore the following (advance position only) */
-                                case IEEE80211_RADIOTAP_TSFT:
-
-                                        p->timestamp = le64toh(*(u_int64_t*)b);//changhua
-                                        b = b + 8;
-                                        break;
-                                case IEEE80211_RADIOTAP_DBM_TX_POWER:
-                                case IEEE80211_RADIOTAP_ANTENNA:
-
-                                case IEEE80211_RADIOTAP_RTS_RETRIES:
-                                case IEEE80211_RADIOTAP_DATA_RETRIES:
-
-                                        b++;
-                                        break;
-                                case IEEE80211_RADIOTAP_EXT:
-
-                                        b = b + 4;
-                                        break;
-                                case IEEE80211_RADIOTAP_FHSS:
-                                case IEEE80211_RADIOTAP_LOCK_QUALITY:
-                                case IEEE80211_RADIOTAP_TX_ATTENUATION:
-                                case IEEE80211_RADIOTAP_RX_FLAGS:
-                                case IEEE80211_RADIOTAP_TX_FLAGS:
-                                case IEEE80211_RADIOTAP_DB_TX_ATTENUATION:
-
-                                        b = b + 2;
-                                        break;
-                                /* we are only interrested in these: */
-                                case IEEE80211_RADIOTAP_RATE:
-                                        p->phy_rate = (*b)*5; /* rate is in 500kbps */
-                                        //p->phy_rate_idx = rate_to_index(p->phy_rate);
-                                        b++;
-                                        break;
-                                case IEEE80211_RADIOTAP_DBM_ANTSIGNAL:
-                                        p->phy_signal = *(char*)b;
-                                        b++;
-                                        break;
-                                case IEEE80211_RADIOTAP_DBM_ANTNOISE:
-
-                                        p->phy_noise = *(char*)b;
-                                        b++;
-                                        break;
-                                case IEEE80211_RADIOTAP_DB_ANTSIGNAL:
-
-                                        p->phy_snr = *b;
-                                        b++;
-                                        break;
-                                case IEEE80211_RADIOTAP_FLAGS:
-                                        /* short preamble */
-
-                                        if (*b & IEEE80211_RADIOTAP_F_SHORTPRE) {
-                                                pch_flags |= PHY_FLAG_SHORTPRE;
-
-                                        }
-                                        if (*b & IEEE80211_RADIOTAP_F_BADFCS) {
-                                                pch_flags |= PHY_FLAG_BADFCS;
-
-                                        }
-
-                                        /*here to get the potential tcp seq, only the outgoing tcp packet is valibale*/
-                                        b++;
-                                        break;
-                                case IEEE80211_RADIOTAP_CHANNEL:
-                                        /* channel & channel type */
-                                        if (((long)b)%2) b++; // align to 16 bit boundary
-
-                                        b = b + 2;
-                                        b = b + 2;
-                                        break;
-                                case IEEE80211_RADIOTAP_MCS:
-                                        /* Ref http://www.radiotap.org/defined-fields/MCS */
-                                        known = *b++;
-                                        flags = *b++;
-
-
-                                        if (known & IEEE80211_RADIOTAP_MCS_HAVE_BW)
-                                                ht20 = (flags & IEEE80211_RADIOTAP_MCS_BW_MASK) == IEEE80211_RADIOTAP_MCS_BW_20;
-                                        else
-                                                ht20 = 1; /* assume HT20 if not present */
-
-                                        if (known & IEEE80211_RADIOTAP_MCS_HAVE_GI)
-                                                lgi = !(flags & IEEE80211_RADIOTAP_MCS_SGI);
-                                        else
-                                                lgi = 1; /* assume long GI if not present */
-
-
-
-                                        //p->phy_rate_idx = 12 + *b;
-                                        /*to fix the debug of openwrt*/
-                                        if (*(b-1) == 0x27)
-                                                b++;
-                                        p->phy_rate = mcs_index_to_rate(*b, ht20, lgi);
-
-
-                                        b++;
-                                        break;
-                        }
-                }
-                else {
-                }
-        }
-
-
-        if (!(present & (1 << IEEE80211_RADIOTAP_DB_ANTSIGNAL))) {
-                /* no SNR in radiotap, try to calculate */
-                if (present & (1 << IEEE80211_RADIOTAP_DBM_ANTSIGNAL) &&
-                    present & (1 << IEEE80211_RADIOTAP_DBM_ANTNOISE) &&
-                    p->phy_noise < 0)
-                        p->phy_snr = p->phy_signal - p->phy_noise;
-                /* HACK: here we just assume noise to be -95dBm */
-                else {
-                        p->phy_snr = p->phy_signal + 95;
-                        //simulate noise: p->phy_noise = -90;
-                }
-        }
-
-        /* sanitize */
-        if (p->phy_snr > 99)
-                p->phy_snr = 99;
-        if (p->phy_rate == 0 || p->phy_rate > 6000) {
-                /* assume min rate for mode */
-                if (pch_flags & PHY_FLAG_A)
-                        p->phy_rate = 120; /* 6 * 2 */
-                else if (pch_flags & PHY_FLAG_B)
-                        p->phy_rate = 20; /* 1 * 2 */
-                else if (pch_flags & PHY_FLAG_G)
-                        p->phy_rate = 120; /* 6 * 2 */
-                else
-                        p->phy_rate = 20;
-        }
-        return rt_len;
-}
-
 
 /*
 To check whether the current packet is in the cs list(\gamma)
 */
-bool matched(struct inf_info *inf,int i, unsigned char mac1[], unsigned char mac2[]){
-        if ( (str_equal(ether_sprintf(mac1),ether_sprintf2(inf[i].wlan_src),2*MAC_LEN) != 1) &&
-           (str_equal(ether_sprintf(mac1),ether_sprintf2(inf[i].wlan_dst),2*MAC_LEN) != 1) )
+bool matched(char src[13], char dst[13], char  mac1[13],char mac2[13]){
+
+	if ( (str_equal(mac1,src,2*MAC_LEN) != 1) &&
+           (str_equal(mac1,dst,2*MAC_LEN) != 1) )
                 return false;
-        if ( (str_equal(ether_sprintf(mac2),ether_sprintf2(inf[i].wlan_src),2*MAC_LEN) != 1) &&
-           (str_equal(ether_sprintf(mac2),ether_sprintf2(inf[i].wlan_dst),2*MAC_LEN) != 1) )
+        if ( (str_equal(mac2,src,2*MAC_LEN) != 1) &&
+           (str_equal(mac2,dst,2*MAC_LEN) != 1) )
                 return false;
         return true;
 }
 /*
 To judge whether the current packet are broadcast, cts, ack or control packet(\gamma)
 */
-bool non_control_packet(struct inf_info *inf,unsigned char mac1[], unsigned char mac2[]){
-        if (str_equal(mac_zero,ether_sprintf(mac1),2*MAC_LEN) == 1)
+bool non_control_packet(char mac1[13], char mac2[13]){
+ 	if (str_equal(mac_zero,mac1,2*MAC_LEN) == 1)
                 return false;
-        if (str_equal(mac_zero,ether_sprintf(mac2),2*MAC_LEN) == 1)
+   	if (str_equal(mac_zero,mac2,2*MAC_LEN) == 1)
                 return false;
         return true;
 }
 /*
 Insert a packet to the carrier sense or hidden teriminal list
 */
-bool update_list(struct inf_info *inf,int NUMBER, unsigned char mac1[], unsigned char mac2[], float value){
-        //if (debug == LOG_DEBUG)
-        //      printf("neighbor packets width %s+%s:%f\n",ether_sprintf(mac1),ether_sprintf2(mac2),value);
-        //printf("\n*******************************\n");
-
-        int i;
-        for(i=0;i<NUMBER;i++){
-                //printf("*  %s+%s:%f\n",ether_sprintf(inf[i].wlan_src),ether_sprintf2(inf[i].wlan_dst),inf[i].value);
-                if (inf[i].value == 0)
-                        break;
-                if (!non_control_packet(inf,mac1,mac2)){
-                        continue;
-                }
-                if (matched(inf,i,mac1,mac2)){
-                        inf[i].value = inf[i].value + value;
+void update_list( unsigned char mac1[6], unsigned char mac2[6], int value){
+	int i;
+        char mac11[13];
+	char mac22[13];
+	struct inf_info * tmp;
+	ether_sprintf(mac1,mac11);
+	ether_sprintf(mac2,mac22);
+	for(i=0;i<CS_NUMBER;i++){
+                tmp = (struct inf_info *)&cs[i];
+		if( (tmp->value != 0) && 
+		    (non_control_packet(mac11,mac22) == true) &&
+                    (matched(tmp->wlan_src,tmp->wlan_dst,mac11,mac22) == true) ){
+                       tmp->value = tmp->value + value;
                 }
         }
-        /* there is no match!!*/
-        for(i=0;i<NUMBER;i++)
+        // there is no match!!
+        for(i=0;i<CS_NUMBER;i++)
         {
-                if (inf[i].value ==0 )
+                tmp = (struct inf_info *)&cs[i];
+                if (cs[i].value == 0 )
                 {
-                        memcpy(inf[i].wlan_src,mac1,MAC_LEN);
-                        memcpy(inf[i].wlan_dst,mac2,MAC_LEN);
+                        memcpy(cs[i].wlan_src,mac1,MAC_LEN);
+                        memcpy(cs[i].wlan_dst,mac2,MAC_LEN);
 
-                        inf[i].value = value;
+                        cs[i].value = value;
                         summary.inf_num = summary.inf_num + 1;
-                        //printf("C  %s+%s:%f\n",ether_sprintf(mac1),ether_sprintf2(mac2),inf[i].value);
-                        //printf("*******************************\n\n");
-                        return; /*pay attention whether it will jump out!*/
+                        return; 
                 }
         }
 }
 static void print_summay(){
         printk(KERN_DEBUG "\ninterferes          =%d\n",summary.inf_num);
-        printk(KERN_DEBUG "mine_packets        =%.1f\n",summary.mine_packets);
-        printk(KERN_DEBUG "inf_packets         =%.1f\n",summary.inf_packets);
+        printk(KERN_DEBUG "mine_packets        =%d\n",summary.mine_packets);
+        printk(KERN_DEBUG "inf_packets         =%d\n",summary.inf_packets);
         printk(KERN_DEBUG "overall_tx_airtime  =%.2f seconds\n",summary.overall_extra_time);
         printk(KERN_DEBUG "overall_busywait    =%.2f seconds\n",summary.overall_busywait);
-        printk(KERN_DEBUG "mine_throughput     =%.2f KB/s\n",(float)summary.mine_bytes*0.001/(float)FREQUENT_UPDATE_PERIOD_SECONDS);
-        printk(KERN_DEBUG "inf_throughput      =%.2f KB/s\n",(float)summary.inf_bytes*0.001/(float)FREQUENT_UPDATE_PERIOD_SECONDS);
-        printk(KERN_DEBUG "sniffer_throughput  =%.2f KB/s\n",(double)summary.sniffer_bytes*0.001/(double)FREQUENT_UPDATE_PERIOD_SECONDS);
+        printk(KERN_DEBUG "mine_throughput     =%.2f KB/s\n",(int)summary.mine_bytes/(int)FREQUENT_UPDATE_PERIOD_SECONDS*1000);
+        printk(KERN_DEBUG "inf_throughput      =%.2f KB/s\n",(int)summary.inf_bytes/(int)FREQUENT_UPDATE_PERIOD_SECONDS*1000);
+        printk(KERN_DEBUG "sniffer_throughput  =%.2f KB/s\n",(int)summary.sniffer_bytes/(int)FREQUENT_UPDATE_PERIOD_SECONDS*1000);
 }
 static void reset_summary(){
         summary.mine_bytes = 0;
@@ -555,7 +276,7 @@ static void print_inf() {
         for(j = 0 ; j < CS_NUMBER ; j ++){
                 if (cs[j].value == 0)
                         break;
-                cs[j].percentage = 100.0*((double)cs[j].value/(double)summary.overall_busywait);
+                cs[j].percentage = 100*(cs[j].value/summary.overall_busywait);
                 printk(KERN_DEBUG "%.1f%%,",cs[j].percentage);
         }
 
@@ -563,35 +284,35 @@ static void print_inf() {
                         inf_start_timestamp,inf_end_timestamp,
                         ht);
 
-        // print summary info
         print_summay();
 
         memset(&summary, 0, sizeof(summary));
 
 }
 int cal_inf(struct packet_info * p){
-        double te = (double)p->timestamp/(double)NUM_NANO_PER_SECOND;
-        double tw = p->tv.tv_sec + (double)p->tv.tv_usec/(double)NUM_MICROS_PER_SECOND;
-        float th = tw;
-        double last_tw = last_p.tv.tv_sec + (double)last_p.tv.tv_usec/(double)NUM_MICROS_PER_SECOND;
-        last_p = (*p);
-        double dmaci = te - th - (double)p->len*8*10/(float)p->phy_rate/(double)NUM_MICROS_PER_SECOND - CONST_TIME_24;
-        summary.overall_busywait = summary.overall_busywait + dmaci;
+    /*    int te = (int)p->timestamp/(int)NUM_NANO_PER_SECOND;
+        int tw = p->tv.tv_sec + (int)p->tv.tv_usec/(int)NUM_MICROS_PER_SECOND;
+        int th = tw;
+        int last_tw = last_p.tv.tv_sec + (int)last_p.tv.tv_usec/(int)NUM_MICROS_PER_SECOND;
+    	memcpy(&last_p,p,sizeof(last_p));
+        int dmaci = te - th - (int)p->len*8*10/(int)p->phy_rate/(int)NUM_MICROS_PER_SECOND - CONST_TIME_24;
+        
+	summary.overall_busywait = summary.overall_busywait + (int)dmaci;
         summary.overall_extra_time = summary.overall_extra_time + te - tw;
         summary.mine_packets = summary.mine_packets + 1;
         summary.mine_bytes = summary.mine_bytes + p->len;
         if (last_tw > th){
                 th = last_tw;
         }
-        float overall_busywait = 0;
+        int overall_busywait = 0;
         int j = 0;
-        /*first round*/
+        //first round
         for (j =current_index;; j=(j-1+HOLD_TIME)%HOLD_TIME){
-                double tr = store[j].tv.tv_sec + (double)store[j].tv.tv_usec/(double)NUM_MICROS_PER_SECOND;
+                int tr = store[j].tv.tv_sec + (int)store[j].tv.tv_usec/(int)NUM_MICROS_PER_SECOND;
 
                 if ((tr > th) && (tr < te)){
-                        float busywait = (float)store[j].len * 8 * 10 / (float)store[j].phy_rate;
-                        busywait = busywait/(float)NUM_MICROS_PER_SECOND;
+                        int busywait = (int)store[j].len * 8 * 10 / (int)store[j].phy_rate;
+                        busywait = busywait/(int)NUM_MICROS_PER_SECOND;
                         if (p->wlan_retry == 0){
                                 overall_busywait = overall_busywait + busywait;
                         }
@@ -602,15 +323,15 @@ int cal_inf(struct packet_info * p){
                         break;
                 }
         }
-        /*second round*/
+        //second round
         for (j =current_index;;  j=(j-1+HOLD_TIME)%HOLD_TIME){
-                double tr = store[j].tv.tv_sec + (double)store[j].tv.tv_usec/(double)NUM_MICROS_PER_SECOND;
+                int tr = store[j].tv.tv_sec + (int)store[j].tv.tv_usec/(int)NUM_MICROS_PER_SECOND;
 
                 if ((tr > th) && (tr < te)){
-                        double busywait = (double)store[j].len * 8 * 10 / (double)store[j].phy_rate;
-                        double inf = busywait/dmaci;
+                        int busywait = (int)store[j].len * 8 * 10 / (int)store[j].phy_rate;
+                        int inf = busywait/dmaci;
                         if ( p->wlan_retry == 0){
-                                update_list(cs,CS_NUMBER,store[j].wlan_src,store[j].wlan_dst,inf);
+                                update_list(store[j].wlan_src,store[j].wlan_dst,inf);
                         }
                         else{
                                 ht = ht + te - th;
@@ -621,16 +342,16 @@ int cal_inf(struct packet_info * p){
                 }
         }
 
-        inf_end_timestamp = p->tv.tv_sec + (double)p->tv.tv_usec/(double)NUM_MICROS_PER_SECOND;
+        inf_end_timestamp = p->tv.tv_sec + (int)p->tv.tv_usec/(int)NUM_MICROS_PER_SECOND;
         //printf("start time is %f, end time is %f\n",inf_start_timestamp,inf_end_timestamp);
         if ((inf_end_timestamp - inf_start_timestamp) > FREQUENT_UPDATE_PERIOD_SECONDS)
         {
-                /*print out*/
-                print_inf();
-                memset(cs,0,sizeof(cs));
+                //print out
+                //print_inf();
+		print_summay();
+		memset(cs,0,sizeof(cs));
                 ht = 0;
                 inf_start_timestamp = inf_end_timestamp;
         }
-
+*/
 }
-
