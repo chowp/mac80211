@@ -398,21 +398,22 @@ ieee80211_add_rx_radiotap_header(struct ieee80211_local *local,
 	store[current_index].phy_rate = rate->bitrate;
 	}*/
 	//debug_index
-	if(debug_index==100)
+	if(debug_index==1000)
 	{
 	   debug_index=0;
 	}
 	else{
 	   debug_index=debug_index+1;
 	}
-	/*if(debug_index == 100){
-	printk(KERN_EMERG "rate = %x\n",rate->bitrate);
-	}*/
 	if(rate == NULL){
 	store[current_index].phy_rate=0;
 	}
 	else{
 	store[current_index].phy_rate=rate->bitrate;
+	}
+	
+	if(debug_index == 500){
+		printk("hello world peichanghua\n");
 	}
 	//store[current_index].phy_rate=8;
 	store[current_index].len = skb->len;

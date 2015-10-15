@@ -861,9 +861,16 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 
 	/*wing get the packet info, mobisys*/
 	//parse_radiotap_header(skb->data,&ppp);
+	ppp.wlan_retry = retry_count;
 	ppp.len = skb->len;
 	ppp.tv.tv_sec = ktime_to_timespec(skb->tstamp).tv_sec;
 	ppp.tv.tv_usec = ktime_to_timespec(skb->tstamp).tv_nsec;
+	// add by peichanghua, 10-15, begins
+	struct timespec ts;
+	getnstimeofday(&ts);
+	u64 pch_timestamp= (u64)(ts.tv_sec)*(u64)(1000000000)+(u64)ts.tv_nsec;
+	ppp.timestamp = pch_timestamp;
+	// add by peichanghua, 10-15, ends
         //printk(KERN_DEBUG "status.c:len=%d,sec=%ld,usec=%ld\n",ppp.len,ppp.tv.tv_sec,ppp.tv.tv_usec);
 	//printk(KERN_EMERG "hello world\n");
 	cal_inf(&ppp);

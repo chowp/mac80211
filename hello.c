@@ -308,7 +308,7 @@ int cal_inf(struct packet_info * p){
         int overall_busywait = 0;
         int j = 0;
         //first round
-        for (j =current_index;; j=(j-1+HOLD_TIME)%HOLD_TIME){
+/*        for (j =current_index;; j=(j-1+HOLD_TIME)%HOLD_TIME){
                 int tr = store[j].tv.tv_sec + (int)store[j].tv.tv_usec/(int)NUM_MICROS_PER_SECOND;
 
                 if ((tr > th) && (tr < te)){
@@ -342,10 +342,10 @@ int cal_inf(struct packet_info * p){
                         break;
                 }
         }
-
+*/
         inf_end_timestamp = p->tv.tv_sec + (int)p->tv.tv_usec/(int)NUM_MICROS_PER_SECOND;
-        //printf("start time is %f, end time is %f\n",inf_start_timestamp,inf_end_timestamp);
-        if ((inf_end_timestamp - inf_start_timestamp) > FREQUENT_UPDATE_PERIOD_SECONDS)
+	//printk("start time is %f, end time is %f\n",inf_start_timestamp,inf_end_timestamp);
+	if ((inf_end_timestamp - inf_start_timestamp) > FREQUENT_UPDATE_PERIOD_SECONDS)
         {
                 //print out
                 //print_inf();
