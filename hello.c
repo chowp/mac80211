@@ -8,6 +8,7 @@
 
 struct packet_info store[HOLD_TIME] = {0};
 int current_index = 0 ;
+int debug_index = 0;
 struct inf_info cs[CS_NUMBER] = {0}; /* used to store cs info in time gamma */
 struct summary_info summary= {0};
 struct packet_info last_p={0};
@@ -290,7 +291,7 @@ static void print_inf() {
 
 }
 int cal_inf(struct packet_info * p){
-    /*    int te = (int)p->timestamp/(int)NUM_NANO_PER_SECOND;
+        int te = (int)p->timestamp/(int)NUM_NANO_PER_SECOND;
         int tw = p->tv.tv_sec + (int)p->tv.tv_usec/(int)NUM_MICROS_PER_SECOND;
         int th = tw;
         int last_tw = last_p.tv.tv_sec + (int)last_p.tv.tv_usec/(int)NUM_MICROS_PER_SECOND;
@@ -353,5 +354,5 @@ int cal_inf(struct packet_info * p){
                 ht = 0;
                 inf_start_timestamp = inf_end_timestamp;
         }
-*/
+
 }

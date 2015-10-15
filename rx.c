@@ -91,7 +91,7 @@ ieee80211_rx_radiotap_space(struct ieee80211_local *local,
 		len += 4 * hweight8(status->chains);
 	/*peichanghua begins*/
 //p	if (ieee80211_have_rx_timestamp(status)) {
-	if(true){
+	/*if(true){
 		len = ALIGN(len, 8);
 		len += 8;
 	}
@@ -146,7 +146,7 @@ ieee80211_add_rx_radiotap_header(struct ieee80211_local *local,
 	u16 rx_flags = 0;
 	u16 channel_flags = 0;
 	int mpdulen, chain;
-	u64 pch_timestamp = 0; /*add by peichanghua*/
+	//u64 pch_timestamp = 0; /*add by peichanghua*/
 	unsigned long chains = status->chains;
 
 	mpdulen = skb->len;
@@ -191,16 +191,16 @@ ieee80211_add_rx_radiotap_header(struct ieee80211_local *local,
                         ieee80211_calculate_rx_timestamp(local, status,
                                                          mpdulen, 0),
                         pos);*/ /* comment by peichanghua*/
-                struct timespec ts;
-                getnstimeofday(&ts);
+                //struct timespec ts;
+                //getnstimeofday(&ts);
                // ktime_t kt;
                 //kt = timespec_to_ktime(ts);
                 //put_unaligned_le64((u64)kt.tv64,pos);
-		u64 test = (u64)(ts.tv_sec)*(u64)(1000000000)+(u64)ts.tv_nsec;
-        	put_unaligned_le64(test,pos);
-                pch_timestamp = test; /*add by peichanghua*/
-		rthdr->it_present |= cpu_to_le32(1 << IEEE80211_RADIOTAP_TSFT);
-                pos += 8;
+		//u64 test = (u64)(ts.tv_sec)*(u64)(1000000000)+(u64)ts.tv_nsec;
+        	//put_unaligned_le64(test,pos);
+                //pch_timestamp = test; /*add by peichanghua*/
+		//rthdr->it_present |= cpu_to_le32(1 << IEEE80211_RADIOTAP_TSFT);
+                //pos += 8;
         }/*peichanghua ends*/
 	/* IEEE80211_RADIOTAP_FLAGS */
 	if (has_fcs && (local->hw.flags & IEEE80211_HW_RX_INCLUDES_FCS))
@@ -380,13 +380,41 @@ ieee80211_add_rx_radiotap_header(struct ieee80211_local *local,
 	
 	/*add by peichanghua, mobisys*/
 	/* fill the packet info and put it into the store*/
-	if (current_index == HOLD_TIME){
+	struct timespec ts;
+	getnstimeofday(&ts);
+	u64 pch_timestamp= (u64)(ts.tv_sec)*(u64)(1000000000)+(u64)ts.tv_nsec;
+
+	if (current_index == HOLD_TIME-1){
 		current_index = 0;
 	}else{
 		current_index = current_index + 1;
 	}
 	//parse_80211_header(skb->data,&store[current_index]);
+	/*if(rate->bitrate == NULL){
+	 store[current_index].phy_rate = 0;
+	}
+	else
+	{
 	store[current_index].phy_rate = rate->bitrate;
+	}*/
+	//debug_index
+	if(debug_index==100)
+	{
+	   debug_index=0;
+	}
+	else{
+	   debug_index=debug_index+1;
+	}
+	/*if(debug_index == 100){
+	printk(KERN_EMERG "rate = %x\n",rate->bitrate);
+	}*/
+	if(rate == NULL){
+	store[current_index].phy_rate=0;
+	}
+	else{
+	store[current_index].phy_rate=rate->bitrate;
+	}
+	//store[current_index].phy_rate=8;
 	store[current_index].len = skb->len;
 	store[current_index].timestamp = pch_timestamp;
 	//printk(KERN_DEBUG "rx.c:index=%d,phy_rate=%f,len=%d,timestamp=%llf\n",current_index,store[current_index].phy_rate,store[current_index].len,store[current_index].timestamp);	

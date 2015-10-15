@@ -865,6 +865,7 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 	ppp.tv.tv_sec = ktime_to_timespec(skb->tstamp).tv_sec;
 	ppp.tv.tv_usec = ktime_to_timespec(skb->tstamp).tv_nsec;
         //printk(KERN_DEBUG "status.c:len=%d,sec=%ld,usec=%ld\n",ppp.len,ppp.tv.tv_sec,ppp.tv.tv_usec);
+	//printk(KERN_EMERG "hello world\n");
 	cal_inf(&ppp);
 	/*wing get the packet info ends*/
 	/* XXX: is this sufficient for BPF? */
@@ -902,6 +903,10 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 	}
 	rcu_read_unlock();
 	dev_kfree_skb(skb);
+	/*mengyuan add*/
+	//cal_inf(&ppp);
+	/*mengyuan add ends*/
+
 }
 EXPORT_SYMBOL(ieee80211_tx_status);
 
