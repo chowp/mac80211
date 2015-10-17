@@ -647,11 +647,10 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 	        /* add by peichanghua begin */
 	char cb_beifen[48];
 	char cb_beifen2[48];
-	printk(KERN_EMERG "hello in status.c time begin before = %ld\n",skb->tstamp.tv.sec);
 	memcpy(cb_beifen,skb->cb,48); 
-        printk(KERN_DEBUG "in status.c tx status, skb->cb %s \n",skb->cb);
-	printk(KERN_DEBUG "hello peichanghua %ld status.c sec \n",ktime_to_timespec(skb->tstamp).tv_sec);
-        printk(KERN_DEBUG "hello peichanghua %ld status.c nano sec\n",ktime_to_timespec(skb->tstamp).tv_nsec);
+        //printk(KERN_DEBUG "in status.c tx status, skb->cb %s \n",skb->cb);
+//printk(KERN_DEBUG "hello peichanghua %ld status.c sec \n",ktime_to_timespec(skb->tstamp).tv_sec);
+        //printk(KERN_DEBUG "hello peichanghua %ld status.c nano sec\n",ktime_to_timespec(skb->tstamp).tv_nsec);
         /* add by peichanghua end   */
 	for (i = 0; i < IEEE80211_TX_MAX_RATES; i++) {
 		if ((info->flags & IEEE80211_TX_CTL_AMPDU) &&
@@ -864,18 +863,13 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 	//parse_radiotap_header(skb->data,&ppp);
 	ppp.wlan_retry = retry_count;
 	ppp.len = skb->len;
-	printk(KERN_EMERG "hello status time before = %d\n",skb->tstamp.tv.sec);
-	ppp.tv.tv_sec = ktime_to_timespec(skb->tstamp).tv_sec;
-	ppp.tv.tv_usec = ktime_to_timespec(skb->tstamp).tv_nsec;
-	printk(KERN_EMERG "hello status time = %ld\n",ppp.tv.tv_sec);
-	// add by peichanghua, 10-15, begins
+	ppp.tw.tv_sec = ktime_to_timespec(skb->tstamp).tv_sec;
+	ppp.tw.tv_nsec = ktime_to_timespec(skb->tstamp).tv_nsec;
 	struct timespec ts;
 	getnstimeofday(&ts);
-	u64 pch_timestamp= (u64)(ts.tv_sec)*(u64)(1000000000)+(u64)ts.tv_nsec;
-	ppp.timestamp = pch_timestamp;
-	// add by peichanghua, 10-15, ends
-        //printk(KERN_DEBUG "status.c:len=%d,sec=%ld,usec=%ld\n",ppp.len,ppp.tv.tv_sec,ppp.tv.tv_usec);
-	//printk(KERN_EMERG "hello world\n");
+	ppp.te.tv_sec = ts.tv_sec;
+	ppp.te.tv_nsec = ts.tv_nsec;
+        printk(KERN_DEBUG "status.c:len=%d,sec=%ld,usec=%ld\n",ppp.len,ppp.tw.tv_sec,ppp.tw.tv_nsec);
 	cal_inf(&ppp);
 	/*wing get the packet info ends*/
 	/* XXX: is this sufficient for BPF? */
@@ -913,10 +907,6 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 	}
 	rcu_read_unlock();
 	dev_kfree_skb(skb);
-	/*mengyuan add*/
-	//cal_inf(&ppp);
-	/*mengyuan add ends*/
-
 }
 EXPORT_SYMBOL(ieee80211_tx_status);
 

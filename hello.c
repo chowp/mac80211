@@ -8,7 +8,6 @@
 
 struct packet_info store[HOLD_TIME] = {0};
 int current_index = 0 ;
-int debug_index = 0;
 struct inf_info cs[CS_NUMBER] = {0}; /* used to store cs info in time gamma */
 struct summary_info summary= {0};
 struct packet_info last_p={0};
@@ -291,59 +290,45 @@ static void print_inf() {
 
 }
 int cal_inf(struct packet_info * p){
-	//u64 tmp = 123456;
-	//printk(KERN_EMERG "tmp = %u\n",tmp);
-        //u64 te = (u64)p->timestamp/(u64)NUM_NANO_PER_SECOND;
-        //long tw = p->tv.tv_sec + p->tv.tv_usec/NUM_MICROS_PER_SECOND;
-	printk(KERN_EMERG "tv_sec = %ld\n",p->tv.tv_sec);
-	//printk(KERN_EMERG "first round tv_sec=%llu,tv_usec = %llu\n",p->tv.tv_sec,p->tv.tv_usec);
-        /*u64 th = tw;
-        u64 last_tw = (u64)last_p.tv.tv_sec + (u64)last_p.tv.tv_usec/(u64)NUM_MICROS_PER_SECOND;
+        struct timespec th,transmit,dmaci,tmp1,tmp2,difs;
+	th = p->tw;
+	if (timespec_compare(&th,&last_p.te)<0){
+		th=last_p.te;
+	}
     	memcpy(&last_p,p,sizeof(last_p));
-        int dmaci = te - th - (int)p->len*8*10/(int)p->phy_rate/(int)NUM_MICROS_PER_SECOND - CONST_TIME_24;
+	transmit.tv_sec = 0;
+	transmit.tv_nsec = p->len*8*10*1000/(p->phy_rate);
+        difs.tv_sec =0;
+	difs.tv_nsec = CONST_TIME_24*1000;
+	tmp1 = timespec_sub(p->te,th);
+	tmp2 = timespec_sub(tmp1,transmit);
+	dmaci = timespec_sub(tmp2,difs);
         
-	summary.overall_busywait = summary.overall_busywait + (int)dmaci;
-        summary.overall_extra_time = summary.overall_extra_time + te - tw;
+	//summary.overall_busywait = summary.overall_busywait + (int)dmaci;
+        //summary.overall_extra_time = summary.overall_extra_time + te - tw;
         summary.mine_packets = summary.mine_packets + 1;
         summary.mine_bytes = summary.mine_bytes + p->len;
-        if (last_tw > th){
-                th = last_tw;
-        }
-        int overall_busywait = 0;*/
-        /*int j = 0;
-	int k = 0;
+        int overall_busywait = 0;
+        int j = 0;
         //first round
-        for (j =current_index;; j=(j-1+HOLD_TIME)%HOLD_TIME){
-                u64 tr = store[j].tv.tv_sec + (u64)store[j].tv.tv_usec/(u64)NUM_MICROS_PER_SECOND;
-                if( k == 100)
-		{
-			break;
-		}
-		else {
-			k++;
-}
-		
-	//		printk(KERN_EMERG "first round tr=%llu,th = %llu\n",tr,th);
-		
-	
-		//printk(KERN_EMERG "first round j=%d\n",j);
-               /* if ((tr > th) && (tr < te)){
+    /*    for (j =current_index;; j=(j-1+HOLD_TIME)%HOLD_TIME){
+                int tr = store[j].tv.tv_sec + (int)store[j].tv.tv_usec/(int)NUM_MICROS_PER_SECOND;
+
+                if ((tr > th) && (tr < te)){
                         int busywait = (int)store[j].len * 8 * 10 / (int)store[j].phy_rate;
                         busywait = busywait/(int)NUM_MICROS_PER_SECOND;
-		//printk(KERN_EMERG "first round j=%d,wlan_retry = %d\n",j,p->wlan_retry);
                         if (p->wlan_retry == 0){
                                 overall_busywait = overall_busywait + busywait;
                         }
                         summary.inf_packets = summary.inf_packets + 1;
                         summary.inf_bytes = summary.inf_bytes + store[j].len;
-                }*/
-            /*    if ( tr < th ){
-	//		printk(KERN_EMERG "first round j=%d\n",j);
+                }
+                if ( tr < th ){
                         break;
                 }
         }
         //second round
-/*        for (j =current_index;;  j=(j-1+HOLD_TIME)%HOLD_TIME){
+        for (j =current_index;;  j=(j-1+HOLD_TIME)%HOLD_TIME){
                 int tr = store[j].tv.tv_sec + (int)store[j].tv.tv_usec/(int)NUM_MICROS_PER_SECOND;
 
                 if ((tr > th) && (tr < te)){
@@ -361,9 +346,9 @@ int cal_inf(struct packet_info * p){
                 }
         }
 */
-        /*inf_end_timestamp = p->tv.tv_sec + (int)p->tv.tv_usec/(int)NUM_MICROS_PER_SECOND;
-	//printk("start time is %f, end time is %f\n",inf_start_timestamp,inf_end_timestamp);
-	if ((inf_end_timestamp - inf_start_timestamp) > FREQUENT_UPDATE_PERIOD_SECONDS)
+        inf_end_timestamp = p->te.tv_sec + (int)p->te.tv_nsec/(int)NUM_MICROS_PER_SECOND;
+        //printf("start time is %f, end time is %f\n",inf_start_timestamp,inf_end_timestamp);
+        if ((inf_end_timestamp - inf_start_timestamp) > FREQUENT_UPDATE_PERIOD_SECONDS)
         {
                 //print out
                 //print_inf();
@@ -372,5 +357,5 @@ int cal_inf(struct packet_info * p){
                 ht = 0;
                 inf_start_timestamp = inf_end_timestamp;
         }
-*/
+
 }

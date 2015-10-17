@@ -6,8 +6,8 @@
 
 //#define tolower(c)     c - 'A' + 'a'
 #define MAC_LEN			6
-#define HOLD_TIME       1
-#define CS_NUMBER       1 
+#define HOLD_TIME       10
+#define CS_NUMBER       10
 #define CONST_TIME_24   70
 #define CONST_TIME_5    76    //50+16+32Byte*8/24Mbps   
 #define NUM_MICROS_PER_SECOND 1e6
@@ -47,7 +47,7 @@ struct summary_info{
 };
 struct packet_info {
 	/* general */
-	struct timeval tv;
+	struct timespec tw;
 	int len;
 	/*wlan phy*/
 	int phy_signal;
@@ -61,14 +61,13 @@ struct packet_info {
 	int phy_noise;
 	unsigned int phy_snr;
 	unsigned int		wlan_nav;
-	u_int64_t		timestamp;	/* timestamp from mactime */
+	struct timespec te;
 };
 
 /*global struct*/
 
 extern struct packet_info store[HOLD_TIME];
 extern int current_index ;
-extern int debug_index;
 extern struct inf_info cs[CS_NUMBER]; 
 extern struct summary_info summary;
 extern struct packet_info last_p;
