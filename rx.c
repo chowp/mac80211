@@ -398,13 +398,13 @@ ieee80211_add_rx_radiotap_header(struct ieee80211_local *local,
 	store[current_index].phy_rate = rate->bitrate;
 	}*/
 	//debug_index
-	if(debug_index==1000)
+	/*if(debug_index==1000)
 	{
 	   debug_index=0;
 	}
 	else{
 	   debug_index=debug_index+1;
-	}
+	}*/
 	if(rate == NULL){
 	store[current_index].phy_rate=0;
 	}
@@ -412,9 +412,9 @@ ieee80211_add_rx_radiotap_header(struct ieee80211_local *local,
 	store[current_index].phy_rate=rate->bitrate;
 	}
 	
-	if(debug_index == 500){
+	/*if(debug_index == 500){
 		printk("hello world peichanghua\n");
-	}
+	}*/
 	//store[current_index].phy_rate=8;
 	store[current_index].len = skb->len;
 	store[current_index].timestamp = pch_timestamp;

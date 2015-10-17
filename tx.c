@@ -1801,6 +1801,8 @@ static void ieee80211_tx_latency_start_msrmnt(struct ieee80211_local *local,
 	struct timespec ts;
         getnstimeofday(&ts);
         skb->tstamp = timespec_to_ktime(ts);
+	printk(KERN_DEBUG "hello in tx.c ts=%ld \n",ts.tv_sec);
+	printk(KERN_DEBUG "hello in tx.c tstamp tv=%d \n",skb->tstamp.tv.sec);
         if (iph && iph->protocol && (iph->protocol == IPPROTO_TCP))
         //if(true)
         {
@@ -1817,8 +1819,8 @@ static void ieee80211_tx_latency_start_msrmnt(struct ieee80211_local *local,
         }
 	/*modified by peichanghua end*/
       /* add by peichanghua begin */
-        //printk(KERN_DEBUG "hello peichanghua %ld in tx.c sec\n",ktime_to_timespec(skb->tstamp).tv_sec);
-       // printk(KERN_DEBUG "hello peichanghua %ld in tx.c nano sec\n",ktime_to_timespec(skb->tstamp).tv_nsec);
+        printk(KERN_DEBUG "hello peichanghua %ld in tx.c sec\n",ktime_to_timespec(skb->tstamp).tv_sec);
+        printk(KERN_DEBUG "hello peichanghua %ld in tx.c nano sec\n",ktime_to_timespec(skb->tstamp).tv_nsec);
         /* add by peichanghua end */
 }
 
