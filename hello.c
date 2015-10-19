@@ -13,6 +13,8 @@ struct summary_info summary= {0};
 struct packet_info last_p={0};
 struct packet_info ppp= {0};
 struct timespec  ht = {0};
+struct timespec  inf_start_timestamp = {0};
+struct timespec  inf_end_timestamp  = {0};
 /* rate in 100kbps */
 int tolower(char c){
 	if (c > 'A'){
@@ -247,13 +249,15 @@ void update_list( unsigned char mac1[6], unsigned char mac2[6],struct timespec  
         }
 }
 static void print_summay(){
-        printk(KERN_DEBUG "\ninterferes          =%d\n",summary.inf_num);
+        printk(KERN_DEBUG "\n%ld.%ld->%ld.%ld\n",inf_start_timestamp.tv_sec,inf_start_timestamp.tv_nsec,inf_end_timestamp.tv_sec,inf_end_timestamp.tv_nsec);
+        printk(KERN_DEBUG "interferes          =%d\n",summary.inf_num);
         printk(KERN_DEBUG "mine_packets        =%d\n",summary.mine_packets);
         printk(KERN_DEBUG "inf_packets         =%d\n",summary.inf_packets);
         printk(KERN_DEBUG "overall_tx_airtime  =%ld s\n",summary.overall_extra_time.tv_sec);
         printk(KERN_DEBUG "overall_tx_airtime  =%ld ns\n",summary.overall_extra_time.tv_nsec);
         printk(KERN_DEBUG "overall_busywait    =%ld s\n",summary.overall_busywait.tv_sec);
         printk(KERN_DEBUG "overall_busywait    =%ld ns\n",summary.overall_busywait.tv_nsec);
+        printk(KERN_DEBUG "mine bytes          =%d Bytes\n",summary.mine_bytes);
         printk(KERN_DEBUG "mine_throughput     =%d KB/s\n",(int)summary.mine_bytes/(int)(FREQUENT_UPDATE_PERIOD_SECONDS*1000));
         printk(KERN_DEBUG "inf_throughput      =%d KB/s\n",(int)summary.inf_bytes/(int)(FREQUENT_UPDATE_PERIOD_SECONDS*1000));
         printk(KERN_DEBUG "sniffer_throughput  =%d KB/s\n",(int)summary.sniffer_bytes/(int)(FREQUENT_UPDATE_PERIOD_SECONDS*1000));
@@ -302,7 +306,9 @@ void copy_timespec(struct timespec * dst, struct timespec * src){
 	dst->tv_nsec = src->tv_nsec;
 }
 int cal_inf(struct packet_info * p){
-        struct timespec th,transmit,dmaci,tmp1,tmp2,difs,tr,busywait,overall_busywait,inf;
+        struct timespec th={0},transmit={0},dmaci={0},tmp1={0},tmp2={0},difs={0},tr={0},busywait={0},overall_busywait={0},inf={0};
+	//if (p->tw.tv_nsec == 0)
+	//	return; 
 	th = p->tw;
 	if (timespec_compare(&th,&last_p.te)<0){
 		th=last_p.te;
@@ -316,7 +322,6 @@ int cal_inf(struct packet_info * p){
 	tmp2 = timespec_sub(tmp1,transmit);
 	dmaci = timespec_sub(tmp2,difs);
         
-	printk(KERN_DEBUG "MY PACKET:%ld.%ld->%ld.%ld,size=%d,rate=%d,trans=0.%ld,dmaci=%ld.%ld\n",p->tw.tv_sec,p->tw.tv_nsec,p->te.tv_sec,p->te.tv_nsec,p->len,p->phy_rate,transmit.tv_nsec,dmaci.tv_sec,dmaci.tv_nsec);
 	copy_timespec(&tmp1,&summary.overall_busywait);
 	summary.overall_busywait = timespec_add(tmp1,dmaci);
         clear_timespec(&tmp1);
@@ -325,6 +330,7 @@ int cal_inf(struct packet_info * p){
         summary.overall_extra_time = timespec_add(tmp2,tmp1);
         summary.mine_packets = summary.mine_packets + 1;
         summary.mine_bytes = summary.mine_bytes + p->len;
+//	printk(KERN_DEBUG "MY PACKET:%ld.%ld->%ld.%ld,size=%d,rate=%d,ampdu=%d,trans=0.%ld,dmaci=%ld.%ld,th=%ld.%ld,unit_extra=%ld.%ld\n",p->tw.tv_sec,p->tw.tv_nsec,p->te.tv_sec,p->te.tv_nsec,p->len,p->phy_rate,p->ampdu,transmit.tv_nsec,dmaci.tv_sec,dmaci.tv_nsec,th.tv_sec,th.tv_nsec,tmp1.tv_sec,tmp1.tv_nsec);
         int j = 0;
         //first round
         int jump = 0;
@@ -384,7 +390,8 @@ int cal_inf(struct packet_info * p){
                 }
         }
 
-        inf_end_timestamp = p->te;
+        copy_timespec(&inf_end_timestamp,&p->te);
+	printk(KERN_DEBUG "%ld.%ld->%ld.%ld,gap=%d\n",inf_start_timestamp.tv_sec,inf_start_timestamp.tv_nsec,inf_end_timestamp.tv_sec,inf_end_timestamp.tv_nsec,timespec_sub(inf_end_timestamp,inf_start_timestamp).tv_sec);
         //printf("start time is %f, end time is %f\n",inf_start_timestamp,inf_end_timestamp);
         if (timespec_sub(inf_end_timestamp,inf_start_timestamp).tv_sec > FREQUENT_UPDATE_PERIOD_SECONDS)
         {
@@ -394,7 +401,7 @@ int cal_inf(struct packet_info * p){
 		memset(cs,0,sizeof(cs));
                 ht.tv_sec = 0;
 		ht.tv_nsec = 0;
-                inf_start_timestamp = inf_end_timestamp;
+                copy_timespec(&inf_start_timestamp,&inf_end_timestamp);
         }
 
 }

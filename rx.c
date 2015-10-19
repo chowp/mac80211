@@ -396,7 +396,7 @@ ieee80211_add_rx_radiotap_header(struct ieee80211_local *local,
 	else{
 	store[current_index].phy_rate=rate->bitrate;
 	}
-	printk(KERN_DEBUG "NEIGHBOR PACKET:index=%d,phy_rate=%d,len=%d,%ld.%ld\n",current_index,store[current_index].phy_rate,store[current_index].len,store[current_index].te.tv_sec,store[current_index].te.tv_nsec);	
+	//printk(KERN_DEBUG "NEIGHBOR PACKET:index=%d,phy_rate=%d,len=%d,%ld.%ld\n",current_index,store[current_index].phy_rate,store[current_index].len,store[current_index].te.tv_sec,store[current_index].te.tv_nsec);	
 /*add by peichanghua ends*/
 }
 

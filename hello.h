@@ -22,8 +22,6 @@
 
 const static char mac_zero[12] = "000000000000";
 const static char mac_ffff[12] = "FFFFFFFFFFFF";
-static struct timespec inf_end_timestamp={0};
-static struct timespec inf_start_timestamp = {0};
 
 static int FREQUENT_UPDATE_PERIOD_SECONDS = 10;
 //int tolower(char c){
@@ -49,6 +47,7 @@ struct packet_info {
 	/* general */
 	struct timespec tw;
 	int len;
+	int ampdu;
 	/*wlan phy*/
 	int phy_signal;
 	unsigned int phy_rate;
@@ -73,6 +72,8 @@ extern struct summary_info summary;
 extern struct packet_info last_p;
 extern struct packet_info ppp;
 extern struct timespec ht;
+extern struct timespec inf_end_timestamp;
+extern struct timespec inf_start_timestamp;
 
 /*declaration of function*/
 //extern int parse_80211_header(const unsigned char * buf,  struct packet_info* p);

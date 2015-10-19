@@ -920,6 +920,15 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 
 	/*wing get the packet info, mobisys*/
 	//parse_radiotap_header(skb->data,&ppp);
+	ppp.ampdu = 0;
+	if ((info->flags & IEEE80211_TX_CTL_AMPDU) &&
+	!(info->flags & IEEE80211_TX_STAT_AMPDU)) {
+		ppp.ampdu=2;
+	}
+	if ((info->flags & IEEE80211_TX_CTL_AMPDU) &&
+	(info->flags & IEEE80211_TX_STAT_AMPDU)) {
+		ppp.ampdu=1;
+	}
 	ppp.phy_rate = get_actual_tx_rate(skb,sband);
 	ppp.wlan_retry = retry_count;
 	ppp.len = skb->len;
