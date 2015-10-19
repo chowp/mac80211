@@ -335,8 +335,8 @@ ieee80211_add_tx_radiotap_header(struct ieee80211_local *local,
 	 */
 /* add by peichanghua begin */
         /* the order of the following fields is important */
-        struct timespec ts;
-        getnstimeofday(&ts);
+        //struct timespec ts;
+        //getnstimeofday(&ts);
         //ktime_t kt = timespec_to_ktime(ts);
         //put_unaligned_le64(kt.tv64,pos);
         /* add by peichanghua begin */
@@ -346,7 +346,7 @@ ieee80211_add_tx_radiotap_header(struct ieee80211_local *local,
        // printk(KERN_DEBUG "hello peichanghua %ld status.c,add header,timespec \n",ts.tv_sec);
        // printk(KERN_DEBUG "hello peichanghua %ld status.c,add header,timespec \n",ts.tv_nsec);
         /* add by peichanghua end   */
-        u64 test = (u64)(ts.tv_sec)*(u64)(1000000000)+(u64)ts.tv_nsec;
+       // u64 test = (u64)(ts.tv_sec)*(u64)(1000000000)+(u64)ts.tv_nsec;
        // put_unaligned_le64(test,pos);
        // pos = pos + 8;
 	/* add by peichanghua end */
@@ -624,7 +624,66 @@ static void ieee80211_lost_packet(struct sta_info *sta, struct sk_buff *skb)
 				    sta->lost_packets, GFP_ATOMIC);
 	sta->lost_packets = 0;
 }
+//this function is added by peichanghua mobisys begins
+int get_actual_tx_rate(struct sk_buff *skb, struct ieee80211_supported_band *sband){
+	unsigned char pos[3];
+	unsigned char idx,nss,ht20,lgi;
+	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
+	/* IEEE80211_RADIOTAP_RATE */
+	if (info->status.rates[0].idx >= 0 &&
+	    !(info->status.rates[0].flags & (IEEE80211_TX_RC_MCS |
+					     IEEE80211_TX_RC_VHT_MCS))) {
+		u16 rate;
+		rate = sband->bitrates[info->status.rates[0].idx].bitrate;
+		return rate*5;
+	}
+	/* IEEE80211_RADIOTAP_MCS
+	 * IEEE80211_RADIOTAP_VHT */
+	if (info->status.rates[0].flags & IEEE80211_TX_RC_MCS) {
+		pos[0] = IEEE80211_RADIOTAP_MCS_HAVE_MCS |
+			 IEEE80211_RADIOTAP_MCS_HAVE_GI |
+			 IEEE80211_RADIOTAP_MCS_HAVE_BW;
+		if (info->status.rates[0].flags & IEEE80211_TX_RC_SHORT_GI)
+			pos[1] |= IEEE80211_RADIOTAP_MCS_SGI;
+		if (info->status.rates[0].flags & IEEE80211_TX_RC_40_MHZ_WIDTH)
+			pos[1] |= IEEE80211_RADIOTAP_MCS_BW_40;
+		if (info->status.rates[0].flags & IEEE80211_TX_RC_GREEN_FIELD)
+			pos[1] |= IEEE80211_RADIOTAP_MCS_FMT_GF;
+		pos[2] = info->status.rates[0].idx;
+		if (pos[0] & IEEE80211_RADIOTAP_MCS_HAVE_BW)
+			ht20 = (pos[1] & IEEE80211_RADIOTAP_MCS_BW_MASK) == IEEE80211_RADIOTAP_MCS_BW_20;
+		else
+			ht20 = 1; /* assume HT20 if not present */
+		if (pos[0] & IEEE80211_RADIOTAP_MCS_HAVE_GI)
+			lgi = !(pos[1] & IEEE80211_RADIOTAP_MCS_SGI);
+		else
+			lgi = 1; /* assume long GI if not present */
+		return mcs_index_to_rate(pos[2],ht20,lgi);
+		//pos += 3;
+	} else if (info->status.rates[0].flags & IEEE80211_TX_RC_VHT_MCS) {
+		/* u8 flags - IEEE80211_RADIOTAP_VHT_FLAG_* */
+		if (info->status.rates[0].flags & IEEE80211_TX_RC_SHORT_GI)
+			lgi = 0;
+		else
+			lgi = 1;
+		/* u8 bandwidth */
+		if (info->status.rates[0].flags & IEEE80211_TX_RC_40_MHZ_WIDTH)
+			ht20 = 2;
+		else if (info->status.rates[0].flags & IEEE80211_TX_RC_80_MHZ_WIDTH)
+			ht20 = 4;
+		else if (info->status.rates[0].flags & IEEE80211_TX_RC_160_MHZ_WIDTH)
+			ht20 = 8;
+		else /* IEEE80211_TX_RC_{20_MHZ_WIDTH,FIXME:DUP_DATA} */
+			ht20 = 1;
+		/* u8 mcs_nss[4] */
+		idx = ieee80211_rate_get_vht_mcs(&info->status.rates[0]);
+		nss  = ieee80211_rate_get_vht_nss(&info->status.rates[0]);
+		return 88;
+	}
+	
+}
 
+// add by peichanghua mobisys ends
 void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 {
 	struct sk_buff *skb2;
@@ -861,6 +920,7 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 
 	/*wing get the packet info, mobisys*/
 	//parse_radiotap_header(skb->data,&ppp);
+	ppp.phy_rate = get_actual_tx_rate(skb,sband);
 	ppp.wlan_retry = retry_count;
 	ppp.len = skb->len;
 	ppp.tw.tv_sec = ktime_to_timespec(skb->tstamp).tv_sec;
@@ -869,7 +929,7 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 	getnstimeofday(&ts);
 	ppp.te.tv_sec = ts.tv_sec;
 	ppp.te.tv_nsec = ts.tv_nsec;
-        printk(KERN_DEBUG "status.c:len=%d,sec=%ld,usec=%ld\n",ppp.len,ppp.tw.tv_sec,ppp.tw.tv_nsec);
+        //printk(KERN_DEBUG "status.c:len=%d,sec=%ld,usec=%ld\n",ppp.len,ppp.tw.tv_sec,ppp.tw.tv_nsec);
 	cal_inf(&ppp);
 	/*wing get the packet info ends*/
 	/* XXX: is this sufficient for BPF? */

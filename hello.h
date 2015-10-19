@@ -22,15 +22,15 @@
 
 const static char mac_zero[12] = "000000000000";
 const static char mac_ffff[12] = "FFFFFFFFFFFF";
-static int inf_end_timestamp = 0;
-static int inf_start_timestamp = 0;
+static struct timespec inf_end_timestamp={0};
+static struct timespec inf_start_timestamp = {0};
 
 static int FREQUENT_UPDATE_PERIOD_SECONDS = 10;
 //int tolower(char c){
 //	return c-'A' + 'a';
 //}
 struct inf_info {
-	int  value;
+	struct timespec  value;
 	int percentage;
 	unsigned char wlan_src[MAC_LEN];
 	unsigned char wlan_dst[MAC_LEN];
@@ -41,8 +41,8 @@ struct summary_info{
 	int  mine_packets;
 	int inf_bytes;
 	int mine_bytes;
-	int overall_extra_time;
-	int overall_busywait;
+	struct timespec  overall_extra_time;
+	struct timespec  overall_busywait;
 	int inf_num;
 };
 struct packet_info {
@@ -72,11 +72,11 @@ extern struct inf_info cs[CS_NUMBER];
 extern struct summary_info summary;
 extern struct packet_info last_p;
 extern struct packet_info ppp;
-extern int ht;
+extern struct timespec ht;
 
 /*declaration of function*/
 //extern int parse_80211_header(const unsigned char * buf,  struct packet_info* p);
 //extern int parse_radiotap_header(unsigned char * buf,  struct packet_info* p);
 int cal_inf(struct packet_info * p);
-
+int mcs_index_to_rate(int mcs,int ht20, int lgi);
 
