@@ -62,11 +62,20 @@ struct packet_info {
 	unsigned int		wlan_nav;
 	struct timespec te;
 };
-
+struct mpdu{
+	struct timespec tw;
+	struct timespec th;
+	struct timespec te;
+	struct timespec last_te;
+	int num;
+	int len;
+	int rate;
+};
 /*global struct*/
 
 extern struct packet_info store[HOLD_TIME];
 extern int current_index ;
+extern int previous_is_ampdu ;
 extern struct inf_info cs[CS_NUMBER]; 
 extern struct summary_info summary;
 extern struct packet_info last_p;
@@ -74,6 +83,7 @@ extern struct packet_info ppp;
 extern struct timespec ht;
 extern struct timespec inf_end_timestamp;
 extern struct timespec inf_start_timestamp;
+extern struct mpdu ampdu;
 
 /*declaration of function*/
 //extern int parse_80211_header(const unsigned char * buf,  struct packet_info* p);
