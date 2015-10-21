@@ -6,7 +6,7 @@
 
 //#define tolower(c)     c - 'A' + 'a'
 #define MAC_LEN			6
-#define HOLD_TIME       10
+#define HOLD_TIME       100
 #define CS_NUMBER       10
 #define CONST_TIME_24   70
 #define CONST_TIME_5    76    //50+16+32Byte*8/24Mbps   

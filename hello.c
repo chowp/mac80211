@@ -251,18 +251,18 @@ void update_list( unsigned char mac1[6], unsigned char mac2[6],struct timespec  
         }
 }
 static void print_summay(){
-        printk(KERN_DEBUG "\n%ld.%ld->%ld.%ld\n",inf_start_timestamp.tv_sec,inf_start_timestamp.tv_nsec,inf_end_timestamp.tv_sec,inf_end_timestamp.tv_nsec);
-        printk(KERN_DEBUG "interferes          =%d\n",summary.inf_num);
-        printk(KERN_DEBUG "mine_packets        =%d\n",summary.mine_packets);
-        printk(KERN_DEBUG "inf_packets         =%d\n",summary.inf_packets);
-        printk(KERN_DEBUG "overall_tx_airtime  =%ld s\n",summary.overall_extra_time.tv_sec);
-        printk(KERN_DEBUG "overall_tx_airtime  =%ld ns\n",summary.overall_extra_time.tv_nsec);
-        printk(KERN_DEBUG "overall_busywait    =%ld s\n",summary.overall_busywait.tv_sec);
-        printk(KERN_DEBUG "overall_busywait    =%ld ns\n",summary.overall_busywait.tv_nsec);
-        printk(KERN_DEBUG "mine bytes          =%d Bytes\n",summary.mine_bytes);
-        printk(KERN_DEBUG "mine_throughput     =%d KB/s\n",(int)summary.mine_bytes/(int)(FREQUENT_UPDATE_PERIOD_SECONDS*1000));
-        printk(KERN_DEBUG "inf_throughput      =%d KB/s\n",(int)summary.inf_bytes/(int)(FREQUENT_UPDATE_PERIOD_SECONDS*1000));
-        printk(KERN_DEBUG "sniffer_throughput  =%d KB/s\n",(int)summary.sniffer_bytes/(int)(FREQUENT_UPDATE_PERIOD_SECONDS*1000));
+        printk(KERN_EMERG "\n%ld.%ld->%ld.%ld\n",inf_start_timestamp.tv_sec,inf_start_timestamp.tv_nsec,inf_end_timestamp.tv_sec,inf_end_timestamp.tv_nsec);
+        printk(KERN_EMERG "interferes          =%d\n",summary.inf_num);
+        printk(KERN_EMERG "mine_packets        =%d\n",summary.mine_packets);
+        printk(KERN_EMERG "inf_packets         =%d\n",summary.inf_packets);
+        printk(KERN_EMERG "overall_tx_airtime  =%ld s\n",summary.overall_extra_time.tv_sec);
+        printk(KERN_EMERG "overall_tx_airtime  =%ld ns\n",summary.overall_extra_time.tv_nsec);
+        printk(KERN_EMERG "overall_busywait    =%ld s\n",summary.overall_busywait.tv_sec);
+        printk(KERN_EMERG "overall_busywait    =%ld ns\n",summary.overall_busywait.tv_nsec);
+        printk(KERN_EMERG "mine bytes          =%d Bytes\n",summary.mine_bytes);
+        printk(KERN_EMERG "mine_throughput     =%d KB/s\n",(int)summary.mine_bytes/(int)(FREQUENT_UPDATE_PERIOD_SECONDS*1000));
+        printk(KERN_EMERG "inf_throughput      =%d KB/s\n",(int)summary.inf_bytes/(int)(FREQUENT_UPDATE_PERIOD_SECONDS*1000));
+        printk(KERN_EMERG "sniffer_throughput  =%d KB/s\n",(int)summary.sniffer_bytes/(int)(FREQUENT_UPDATE_PERIOD_SECONDS*1000));
 }
 static void reset_summary(){
         summary.mine_bytes = 0;
@@ -320,7 +320,7 @@ struct timespec cal_dmaci_ampdu(){
 	tmp1 = timespec_sub(ampdu.te,ampdu.th);
 	tmp2 = timespec_sub(tmp1,transmit);
 	dmaci = timespec_sub(tmp2,difs);
-	printk(KERN_DEBUG "[ampdu][ ]:%ld.%ld->%ld.%ld,size=%d,rate=%d,previous_is_ampdu=%d,dmaci=%ld.%ld,mpdu_num=%d,th=%ld.%ld\n",ampdu.tw.tv_sec,ampdu.tw.tv_nsec,ampdu.te.tv_sec,ampdu.te.tv_nsec,ampdu.len,ampdu.rate,previous_is_ampdu,dmaci.tv_sec,dmaci.tv_nsec,ampdu.num,ampdu.th.tv_sec,ampdu.th.tv_nsec);
+//	printk(KERN_DEBUG "[ampdu][ ]:%ld.%ld->%ld.%ld,size=%d,rate=%d,previous_is_ampdu=%d,dmaci=%ld.%ld,mpdu_num=%d,th=%ld.%ld\n",ampdu.tw.tv_sec,ampdu.tw.tv_nsec,ampdu.te.tv_sec,ampdu.te.tv_nsec,ampdu.len,ampdu.rate,previous_is_ampdu,dmaci.tv_sec,dmaci.tv_nsec,ampdu.num,ampdu.th.tv_sec,ampdu.th.tv_nsec);
 	return dmaci;
 }
 
@@ -337,7 +337,6 @@ void divide_inf(struct timespec th, struct timespec te, struct timespec dmaci,in
         //first round
         int jump = 0;
 	for (j =current_index;; j=(j-1+HOLD_TIME)%HOLD_TIME){
-                summary.sniffer_bytes = summary.sniffer_bytes + store[j].len;
 		jump = jump + 1;
 		if (jump == HOLD_TIME){
 			//traverse all the packets.`
@@ -427,13 +426,13 @@ int cal_inf(struct packet_info * p){
 		ampdu.len = p->len;
     		memcpy(&last_p,p,sizeof(last_p));
 		check_print(p);
-		printk(KERN_EMERG "[  %d  ][%d]:%ld.%ld->%ld.%ld,size=%d,rate=%d,previous_is_ampdu=%d\n",p->ampdu,p->wlan_retry,p->tw.tv_sec,p->tw.tv_nsec,p->te.tv_sec,p->te.tv_nsec,p->len,p->phy_rate,previous_is_ampdu);
+//		printk(KERN_DEBUG "[  %d  ][%d]:%ld.%ld->%ld.%ld,size=%d,rate=%d,previous_is_ampdu=%d\n",p->ampdu,p->wlan_retry,p->tw.tv_sec,p->tw.tv_nsec,p->te.tv_sec,p->te.tv_nsec,p->len,p->phy_rate,previous_is_ampdu);
        		previous_is_ampdu = p->ampdu; 
 	}else if(p->ampdu==2){ //rest of packets of aggregation
 		p->phy_rate = ampdu.rate;
 		copy_timespec(&ampdu.tw,&p->tw);
 		ampdu.num = ampdu.num +  1;
-		printk(KERN_EMERG "[  %d  ][%d]:%ld.%ld->%ld.%ld,size=%d,rate=%d,previous_is_ampdu=%d\n",p->ampdu,p->wlan_retry,p->tw.tv_sec,p->tw.tv_nsec,p->te.tv_sec,p->te.tv_nsec,p->len,p->phy_rate,previous_is_ampdu);
+//		printk(KERN_DEBUG "[  %d  ][%d]:%ld.%ld->%ld.%ld,size=%d,rate=%d,previous_is_ampdu=%d\n",p->ampdu,p->wlan_retry,p->tw.tv_sec,p->tw.tv_nsec,p->te.tv_sec,p->te.tv_nsec,p->len,p->phy_rate,previous_is_ampdu);
 	}else{
 		// non-aggregation packet
 		th = p->tw;
@@ -455,7 +454,7 @@ int cal_inf(struct packet_info * p){
 		update_summary(dmaci,p->len,1);
 		divide_inf(th,p->te,dmaci,p->wlan_retry);
 		check_print(p);
-	printk(KERN_EMERG "[  %d  ][%d]:%ld.%ld->%ld.%ld,size=%d,rate=%d,previous_is_ampdu=%d,dmaci=%ld.%ld,th=%ld.%ld\n",p->ampdu,p->wlan_retry,p->tw.tv_sec,p->tw.tv_nsec,p->te.tv_sec,p->te.tv_nsec,p->len,p->phy_rate,previous_is_ampdu,dmaci.tv_sec,dmaci.tv_nsec,th.tv_sec,th.tv_nsec);
+//	printk(KERN_DEBUG "[  %d  ][%d]:%ld.%ld->%ld.%ld,size=%d,rate=%d,previous_is_ampdu=%d,dmaci=%ld.%ld,th=%ld.%ld\n",p->ampdu,p->wlan_retry,p->tw.tv_sec,p->tw.tv_nsec,p->te.tv_sec,p->te.tv_nsec,p->len,p->phy_rate,previous_is_ampdu,dmaci.tv_sec,dmaci.tv_nsec,th.tv_sec,th.tv_nsec);
        		previous_is_ampdu = p->ampdu; 
 	}
 

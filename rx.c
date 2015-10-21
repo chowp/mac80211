@@ -390,6 +390,7 @@ ieee80211_add_rx_radiotap_header(struct ieee80211_local *local,
 		current_index = current_index + 1;
 	}
 	store[current_index].len = skb->len;
+	summary.sniffer_bytes = summary.sniffer_bytes + store[current_index].len;
 	if(rate == NULL){
 	store[current_index].phy_rate=0;
 	}
