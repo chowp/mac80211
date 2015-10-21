@@ -314,21 +314,21 @@ struct timespec cal_dmaci_ampdu(){
 		ampdu.th=ampdu.last_te;
 	}
 	transmit.tv_sec = 0;
-	transmit.tv_nsec = ampdu.len*8*10*1000/(ampdu.rate);
+	transmit.tv_nsec = ampdu.len*8*10*1000*ampdu.num/(ampdu.rate);
         difs.tv_sec =0;
 	difs.tv_nsec = CONST_TIME_24*1000;
 	tmp1 = timespec_sub(ampdu.te,ampdu.th);
 	tmp2 = timespec_sub(tmp1,transmit);
 	dmaci = timespec_sub(tmp2,difs);
-	printk(KERN_DEBUG "ampdu PACKET:%ld.%ld->%ld.%ld,size=%d,rate=%d,dmaci=%ld.%ld,previous_is_ampdu=%d\n",ampdu.tw.tv_sec,ampdu.tw.tv_nsec,ampdu.te.tv_sec,ampdu.te.tv_nsec,ampdu.len,ampdu.rate,dmaci.tv_sec,dmaci.tv_nsec,previous_is_ampdu);
+	printk(KERN_DEBUG "[ampdu][ ]:%ld.%ld->%ld.%ld,size=%d,rate=%d,previous_is_ampdu=%d,dmaci=%ld.%ld,mpdu_num=%d,th=%ld.%ld\n",ampdu.tw.tv_sec,ampdu.tw.tv_nsec,ampdu.te.tv_sec,ampdu.te.tv_nsec,ampdu.len,ampdu.rate,previous_is_ampdu,dmaci.tv_sec,dmaci.tv_nsec,ampdu.num,ampdu.th.tv_sec,ampdu.th.tv_nsec);
 	return dmaci;
 }
 
-void update_summay(struct timespec dmaci,int len){
+void update_summary(struct timespec dmaci,int len,int num){
 	struct timespec tmp1={0};
 	copy_timespec(&tmp1,&summary.overall_busywait);
 	summary.overall_busywait = timespec_add(tmp1,dmaci);
-        summary.mine_packets = summary.mine_packets + 1;
+        summary.mine_packets = summary.mine_packets + num;
         summary.mine_bytes = summary.mine_bytes + len;
 }
 void divide_inf(struct timespec th, struct timespec te, struct timespec dmaci,int retry){
@@ -409,12 +409,11 @@ void check_print(struct packet_info *p){
         }
 }
 int cal_inf(struct packet_info * p){
-	printk(KERN_EMERG "hello cal_inf\n");
         struct timespec th={0},transmit={0},dmaci={0},tmp1={0},tmp2={0},difs={0},tr={0};
 	if (previous_is_ampdu != 0){
 		if (p->ampdu != 2){
 			dmaci = cal_dmaci_ampdu();
-			update_summay(dmaci,ampdu.len*ampdu.num);
+			update_summary(dmaci,ampdu.len*ampdu.num,ampdu.num);
 			divide_inf(ampdu.th,ampdu.te,dmaci,0);
 			check_print(p);
 		}
@@ -424,16 +423,17 @@ int cal_inf(struct packet_info * p){
 		copy_timespec(&ampdu.te,&p->te);
 		copy_timespec(&ampdu.last_te,&last_p.te);
 		copy_timespec(&ampdu.tw,&p->tw);
-		ampdu.num = ampdu.num + 1;
+		ampdu.num = 1;
 		ampdu.len = p->len;
     		memcpy(&last_p,p,sizeof(last_p));
 		check_print(p);
-		printk(KERN_EMERG "MY PACKET:%ld.%ld->%ld.%ld,size=%d,rate=%d,ampdu=%d,previous_is_ampdu=%d\n",p->tw.tv_sec,p->tw.tv_nsec,p->te.tv_sec,p->te.tv_nsec,p->len,p->phy_rate,p->ampdu,previous_is_ampdu);
+		printk(KERN_EMERG "[  %d  ][%d]:%ld.%ld->%ld.%ld,size=%d,rate=%d,previous_is_ampdu=%d\n",p->ampdu,p->wlan_retry,p->tw.tv_sec,p->tw.tv_nsec,p->te.tv_sec,p->te.tv_nsec,p->len,p->phy_rate,previous_is_ampdu);
        		previous_is_ampdu = p->ampdu; 
 	}else if(p->ampdu==2){ //rest of packets of aggregation
 		p->phy_rate = ampdu.rate;
 		copy_timespec(&ampdu.tw,&p->tw);
-		printk(KERN_EMERG "MY PACKET:%ld.%ld->%ld.%ld,size=%d,rate=%d,ampdu=%d,previous_is_ampdu=%d\n",p->tw.tv_sec,p->tw.tv_nsec,p->te.tv_sec,p->te.tv_nsec,p->len,p->phy_rate,p->ampdu,previous_is_ampdu);
+		ampdu.num = ampdu.num +  1;
+		printk(KERN_EMERG "[  %d  ][%d]:%ld.%ld->%ld.%ld,size=%d,rate=%d,previous_is_ampdu=%d\n",p->ampdu,p->wlan_retry,p->tw.tv_sec,p->tw.tv_nsec,p->te.tv_sec,p->te.tv_nsec,p->len,p->phy_rate,previous_is_ampdu);
 	}else{
 		// non-aggregation packet
 		th = p->tw;
@@ -452,10 +452,10 @@ int cal_inf(struct packet_info * p){
 		tmp1 = timespec_sub(p->te,th);
 		tmp2 = timespec_sub(tmp1,transmit);
 		dmaci = timespec_sub(tmp2,difs);
-		update_summay(dmaci,p->len);
+		update_summary(dmaci,p->len,1);
 		divide_inf(th,p->te,dmaci,p->wlan_retry);
 		check_print(p);
-	printk(KERN_EMERG "MY PACKET:%ld.%ld->%ld.%ld,size=%d,rate=%d,ampdu=%d,dmaci=%ld.%ld,previous_is_ampdu=%d\n",p->tw.tv_sec,p->tw.tv_nsec,p->te.tv_sec,p->te.tv_nsec,p->len,p->phy_rate,p->ampdu,dmaci.tv_sec,dmaci.tv_nsec,previous_is_ampdu);
+	printk(KERN_EMERG "[  %d  ][%d]:%ld.%ld->%ld.%ld,size=%d,rate=%d,previous_is_ampdu=%d,dmaci=%ld.%ld,th=%ld.%ld\n",p->ampdu,p->wlan_retry,p->tw.tv_sec,p->tw.tv_nsec,p->te.tv_sec,p->te.tv_nsec,p->len,p->phy_rate,previous_is_ampdu,dmaci.tv_sec,dmaci.tv_nsec,th.tv_sec,th.tv_nsec);
        		previous_is_ampdu = p->ampdu; 
 	}
 
