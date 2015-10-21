@@ -320,7 +320,7 @@ struct timespec cal_dmaci_ampdu(){
 	tmp1 = timespec_sub(ampdu.te,ampdu.th);
 	tmp2 = timespec_sub(tmp1,transmit);
 	dmaci = timespec_sub(tmp2,difs);
-//	printk(KERN_DEBUG "[ampdu][ ]:%ld.%ld->%ld.%ld,size=%d,rate=%d,previous_is_ampdu=%d,dmaci=%ld.%ld,mpdu_num=%d,th=%ld.%ld\n",ampdu.tw.tv_sec,ampdu.tw.tv_nsec,ampdu.te.tv_sec,ampdu.te.tv_nsec,ampdu.len,ampdu.rate,previous_is_ampdu,dmaci.tv_sec,dmaci.tv_nsec,ampdu.num,ampdu.th.tv_sec,ampdu.th.tv_nsec);
+	printk(KERN_DEBUG "[ampdu][ ]:%ld.%ld->%ld.%ld,size=%d,rate=%d,previous_is_ampdu=%d,dmaci=%ld.%ld,mpdu_num=%d,th=%ld.%ld\n",ampdu.tw.tv_sec,ampdu.tw.tv_nsec,ampdu.te.tv_sec,ampdu.te.tv_nsec,ampdu.len,ampdu.rate,previous_is_ampdu,dmaci.tv_sec,dmaci.tv_nsec,ampdu.num,ampdu.th.tv_sec,ampdu.th.tv_nsec);
 	return dmaci;
 }
 
@@ -339,16 +339,16 @@ void divide_inf(struct timespec th, struct timespec te, struct timespec dmaci,in
 	for (j =current_index;; j=(j-1+HOLD_TIME)%HOLD_TIME){
 		jump = jump + 1;
 		if (jump == HOLD_TIME){
-			//traverse all the packets.`
+//			printk(KERN_DEBUG "first round traversed all the packets.\n");
 			break; 
 		}
 		clear_timespec(&tr);
                 tr = store[j].te;
-
+//		printk(KERN_DEBUG "[%ld.%ld->%ld.%ld] \t [Jump.%d,No.%d] %ld.%ld\n",th.tv_sec,th.tv_nsec,te.tv_sec,te.tv_nsec,jump,j,tr.tv_sec,tr.tv_nsec);
                 if ((timespec_compare(&tr,&th)>0) && (timespec_compare(&tr ,&te)<0)){
 			clear_timespec(&busywait);
 			busywait.tv_sec = 0;
-	//		busywait.tv_nsec = store[j].len * 8 * 10 *1000/ store[j].phy_rate;
+			busywait.tv_nsec = store[j].len * 8 * 10 *1000/(store[j].phy_rate);
                         if (retry == 0){
                                 overall_busywait = timespec_add(overall_busywait ,busywait);
                         }
@@ -364,6 +364,7 @@ void divide_inf(struct timespec th, struct timespec te, struct timespec dmaci,in
         for (j =current_index;;  j=(j-1+HOLD_TIME)%HOLD_TIME){
                 jump = jump +1;
 		if (jump == HOLD_TIME){
+//			printk(KERN_DEBUG "second round traversed all the packets.\n");
 			break;
 		}
 		clear_timespec(&tr);
@@ -372,7 +373,7 @@ void divide_inf(struct timespec th, struct timespec te, struct timespec dmaci,in
                 if ((timespec_compare(&tr,&th)>0) && (timespec_compare(&tr ,&te)<0)){
 			clear_timespec(&busywait);
 			busywait.tv_sec = 0;
-	//		busywait.tv_nsec = store[j].len * 8 * 10 *1000/ store[j].phy_rate;
+			busywait.tv_nsec = store[j].len * 8 * 10 *1000/ store[j].phy_rate;
   //                      int ratio = 100*timespec_to_ns(&busywait)/timespec_to_ns(&overall_busywait);
 			clear_timespec(&inf);
 	//		inf.tv_sec = dmaci.tv_sec*ratio/100;
@@ -414,7 +415,7 @@ int cal_inf(struct packet_info * p){
 			dmaci = cal_dmaci_ampdu();
 			update_summary(dmaci,ampdu.len*ampdu.num,ampdu.num);
 			divide_inf(ampdu.th,ampdu.te,dmaci,0);
-			check_print(p);
+//			check_print(p);
 		}
 	}
 	if(p->ampdu == 1){ //first packet of aggregation
@@ -425,7 +426,7 @@ int cal_inf(struct packet_info * p){
 		ampdu.num = 1;
 		ampdu.len = p->len;
     		memcpy(&last_p,p,sizeof(last_p));
-		check_print(p);
+//		check_print(p);
 //		printk(KERN_DEBUG "[  %d  ][%d]:%ld.%ld->%ld.%ld,size=%d,rate=%d,previous_is_ampdu=%d\n",p->ampdu,p->wlan_retry,p->tw.tv_sec,p->tw.tv_nsec,p->te.tv_sec,p->te.tv_nsec,p->len,p->phy_rate,previous_is_ampdu);
        		previous_is_ampdu = p->ampdu; 
 	}else if(p->ampdu==2){ //rest of packets of aggregation
@@ -453,9 +454,9 @@ int cal_inf(struct packet_info * p){
 		dmaci = timespec_sub(tmp2,difs);
 		update_summary(dmaci,p->len,1);
 		divide_inf(th,p->te,dmaci,p->wlan_retry);
-		check_print(p);
-//	printk(KERN_DEBUG "[  %d  ][%d]:%ld.%ld->%ld.%ld,size=%d,rate=%d,previous_is_ampdu=%d,dmaci=%ld.%ld,th=%ld.%ld\n",p->ampdu,p->wlan_retry,p->tw.tv_sec,p->tw.tv_nsec,p->te.tv_sec,p->te.tv_nsec,p->len,p->phy_rate,previous_is_ampdu,dmaci.tv_sec,dmaci.tv_nsec,th.tv_sec,th.tv_nsec);
-       		previous_is_ampdu = p->ampdu; 
+//		check_print(p);
+	printk(KERN_DEBUG "[  %d  ][%d]:%ld.%ld->%ld.%ld,size=%d,rate=%d,previous_is_ampdu=%d,dmaci=%ld.%ld,th=%ld.%ld\n",p->ampdu,p->wlan_retry,p->tw.tv_sec,p->tw.tv_nsec,p->te.tv_sec,p->te.tv_nsec,p->len,p->phy_rate,previous_is_ampdu,dmaci.tv_sec,dmaci.tv_nsec,th.tv_sec,th.tv_nsec);
+		previous_is_ampdu = p->ampdu; 
 	}
 
 }
