@@ -379,25 +379,25 @@ ieee80211_add_rx_radiotap_header(struct ieee80211_local *local,
 	
 	/*add by peichanghua, mobisys*/
 	/* fill the packet info and put it into the store*/
-	struct timespec ts;
-	getnstimeofday(&ts);
-	store[current_index].te.tv_sec = ts.tv_sec;
-	store[current_index].te.tv_nsec = ts.tv_nsec;
-	
 	if (current_index == HOLD_TIME){
 		current_index = 0;
 	}else{
 		current_index = current_index + 1;
 	}
+	struct timespec ts;
+	getnstimeofday(&ts);
+	store[current_index].te.tv_sec = ts.tv_sec;
+	store[current_index].te.tv_nsec = ts.tv_nsec;
 	store[current_index].len = skb->len;
 	summary.sniffer_bytes = summary.sniffer_bytes + store[current_index].len;
 	if(rate == NULL){
-	store[current_index].phy_rate=0;
+		store[current_index].phy_rate=0;
 	}
 	else{
-	store[current_index].phy_rate=rate->bitrate;
+		store[current_index].phy_rate=rate->bitrate;
 	}
-	//printk(KERN_DEBUG "NEIGHBOR PACKET:index=%d,phy_rate=%d,len=%d,%ld.%ld\n",current_index,store[current_index].phy_rate,store[current_index].len,store[current_index].te.tv_sec,store[current_index].te.tv_nsec);	
+	
+//	printk(KERN_DEBUG "[neighbor]:index=%d,phy_rate=%d,len=%d,%ld.%ld\n",current_index,store[current_index].phy_rate,store[current_index].len,store[current_index].te.tv_sec,store[current_index].te.tv_nsec);	
 /*add by peichanghua ends*/
 }
 

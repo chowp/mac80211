@@ -938,7 +938,7 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 	getnstimeofday(&ts);
 	ppp.te.tv_sec = ts.tv_sec;
 	ppp.te.tv_nsec = ts.tv_nsec;
-        //printk(KERN_DEBUG "status.c:len=%d,sec=%ld,usec=%ld\n",ppp.len,ppp.tw.tv_sec,ppp.tw.tv_nsec);
+       // printk(KERN_DEBUG "[mypacket]:%ld.%ld->%ld.%ld,len=%d\n",ppp.tw.tv_sec,ppp.tw.tv_nsec,ppp.te.tv_sec,ppp.te.tv_nsec,ppp.len);
 	cal_inf(&ppp);
 	/*wing get the packet info ends*/
 	/* XXX: is this sufficient for BPF? */

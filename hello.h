@@ -6,7 +6,7 @@
 
 //#define tolower(c)     c - 'A' + 'a'
 #define MAC_LEN			6
-#define HOLD_TIME       100
+#define HOLD_TIME       1000
 #define CS_NUMBER       10
 #define CONST_TIME_24   70
 #define CONST_TIME_5    76    //50+16+32Byte*8/24Mbps   
@@ -74,6 +74,7 @@ struct mpdu{
 /*global struct*/
 
 extern struct packet_info store[HOLD_TIME];
+extern struct packet_info backup_store[HOLD_TIME];
 extern int current_index ;
 extern int previous_is_ampdu ;
 extern struct inf_info cs[CS_NUMBER]; 
