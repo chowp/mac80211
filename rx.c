@@ -127,6 +127,7 @@ ieee80211_rx_radiotap_space(struct ieee80211_local *local,
 	return len;
 }
 
+
 /*
  * ieee80211_add_rx_radiotap_header - add radiotap header
  *
@@ -138,6 +139,7 @@ ieee80211_add_rx_radiotap_header(struct ieee80211_local *local,
 				 struct ieee80211_rate *rate,
 				 int rtap_len, bool has_fcs)
 {
+	struct ieee80211_hdr *hdr = (void *)skb->data; //add by peichanghua
 	struct ieee80211_rx_status *status = IEEE80211_SKB_RXCB(skb);
 	struct ieee80211_radiotap_header *rthdr;
 	unsigned char *pos;
@@ -389,6 +391,8 @@ ieee80211_add_rx_radiotap_header(struct ieee80211_local *local,
 	store[current_index].te.tv_sec = ts.tv_sec;
 	store[current_index].te.tv_nsec = ts.tv_nsec;
 	store[current_index].len = skb->len;
+	memcpy(store[current_index].wlan_src,ieee80211_get_SA(hdr),MAC_LEN);
+	memcpy(store[current_index].wlan_dst,ieee80211_get_DA(hdr),MAC_LEN);
 	summary.sniffer_bytes = summary.sniffer_bytes + store[current_index].len;
 	if(rate == NULL){
 		store[current_index].phy_rate=0;

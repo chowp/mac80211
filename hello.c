@@ -112,10 +112,30 @@ mcs_index_to_rate(int mcs, int ht20, int lgi)
         return 0;
 }
 void
-ether_sprintf(unsigned char mac[6], char output[13])
+ether_sprintf(unsigned char *mac, char *output)
 {
-        snprintf(output, sizeof(output), "%02x%02x%02x%02x%02x%02x",
+        snprintf(output, sizeof(output), "%02x%02x%02x%02x%02x%02x\0",
                 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+}
+void 
+pch_print(unsigned char *mac){
+	printk(KERN_DEBUG "%02x%02x%02x%02x%02x%02x",mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+}
+char *
+ether_sprintf_test(unsigned char *mac)
+{
+	static char output[13];
+        snprintf(output, sizeof(output), "%02x%02x%02x%02x%02x%02x\0",
+                mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+	return output;
+}
+char *
+ether_sprintf_test2(unsigned char *mac)
+{
+	static char output2[13];
+        snprintf(output2, sizeof(output2), "%02x%02x%02x%02x%02x%02x\0",
+                mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+	return output2;
 }
 
 char*
@@ -228,12 +248,13 @@ void update_list( unsigned char mac1[6], unsigned char mac2[6],struct timespec  
 	struct inf_info * tmp;
 	ether_sprintf(mac1,mac11);
 	ether_sprintf(mac2,mac22);
-	printk(KERN_DEBUG "%s<->%s:+:%ld.%ld",mac11,mac22,value.tv_sec,value.tv_nsec);
+	//printk(KERN_DEBUG "%s<-1->%s:+:%ld.%ld\n",ether_sprintf_test(mac1),ether_sprintf_test2(mac2),value.tv_sec,value.tv_nsec);
+	//printk(KERN_DEBUG "%s<-2->%s:+:%ld.%ld\n",mac11,mac22,value.tv_sec,value.tv_nsec);
 	for(i=0;i<CS_NUMBER;i++){
                 tmp = (struct inf_info *)&cs[i];
 		if( (tmp->value.tv_nsec != 0) && 
-		    (non_control_packet(mac11,mac22) == true) &&
-                    (matched(tmp->wlan_src,tmp->wlan_dst,mac11,mac22) == true) ){
+		    (non_control_packet(ether_sprintf_test(mac1),ether_sprintf_test2(mac2)) == true) &&
+                    (matched(tmp->wlan_src,tmp->wlan_dst,ether_sprintf_test(mac1),ether_sprintf_test2(mac2)) == true) ){
                        tmp->value = timespec_add(tmp->value,value);
                 }
         }
@@ -265,6 +286,7 @@ static void print_summay(){
         printk(KERN_EMERG "mine_throughput     =%d KB/s\n",(int)summary.mine_bytes/(int)(FREQUENT_UPDATE_PERIOD_SECONDS*1000));
         printk(KERN_EMERG "inf_throughput      =%d KB/s\n",(int)summary.inf_bytes/(int)(FREQUENT_UPDATE_PERIOD_SECONDS*1000));
         printk(KERN_EMERG "sniffer_throughput  =%d KB/s\n",(int)summary.sniffer_bytes/(int)(FREQUENT_UPDATE_PERIOD_SECONDS*1000));
+        printk(KERN_EMERG "----------------------------------\n");
 }
 static void reset_summary(){
         summary.mine_bytes = 0;
@@ -285,14 +307,15 @@ print out the carrier sense's interference seperately
 static void print_inf() {
         int j;
         printk(KERN_DEBUG "\ngamma:%ld->%ld\n",inf_start_timestamp.tv_sec,inf_end_timestamp.tv_sec);
-        printk(KERN_DEBUG "\nCS:\n");
+        printk(KERN_DEBUG "OVERALL TRANSMITTING TIME:\n   %ld second(s) + %ld nanoseconds\n",summary.overall_extra_time.tv_sec,summary.overall_extra_time.tv_nsec);
+	printk(KERN_DEBUG "\nCS:\n");
         for(j = 0 ; j < CS_NUMBER ; j ++){
                 if (cs[j].value.tv_nsec == 0)
                         break;
-                printk(KERN_DEBUG "   %ld.%ld\n",cs[j].value.tv_sec,cs[j].value.tv_nsec);
+                printk(KERN_DEBUG "   %ld second(s) + %ld nanoseconds\n",cs[j].value.tv_sec,cs[j].value.tv_nsec);
         }
 
-        printk(KERN_DEBUG "\nHT:%ld.%ld\n",ht.tv_sec,ht.tv_nsec);
+        printk(KERN_DEBUG "\nHT:%ld second(s) + %ld nanoseconds\n",ht.tv_sec,ht.tv_nsec);
 
 }
 void clear_timespec(struct timespec * test){
@@ -314,6 +337,7 @@ struct timespec cal_dmaci_ampdu(){
         difs.tv_sec =0;
 	difs.tv_nsec = CONST_TIME_24*1000;
 	tmp1 = timespec_sub(ampdu.te,ampdu.th);
+	summary.overall_extra_time = timespec_add(summary.overall_extra_time,tmp1);
 	tmp2 = timespec_sub(tmp1,transmit);
 	dmaci = timespec_sub(tmp2,difs);
 //	printk(KERN_DEBUG "[ampdu][ ]:%ld.%ld->%ld.%ld,size=%d,rate=%d,previous_is_ampdu=%d,dmaci=%ld.%ld,mpdu_num=%d,th=%ld.%ld\n",ampdu.tw.tv_sec,ampdu.tw.tv_nsec,ampdu.te.tv_sec,ampdu.te.tv_nsec,ampdu.len,ampdu.rate,previous_is_ampdu,dmaci.tv_sec,dmaci.tv_nsec,ampdu.num,ampdu.th.tv_sec,ampdu.th.tv_nsec);
@@ -374,11 +398,12 @@ void divide_inf(struct packet_info sniffer[],struct timespec th, struct timespec
                         break;
                 }
         }
-	printk(KERN_DEBUG "\n[th------>te] : [%d,%d][%ld.%ld->%ld.%ld]\n",retry,ampdu_type,th.tv_sec,th.tv_nsec,te.tv_sec,te.tv_nsec);
+/*	printk(KERN_DEBUG "\n[th------>te] : [%d,%d][%ld.%ld->%ld.%ld]\n",retry,ampdu_type,th.tv_sec,th.tv_nsec,te.tv_sec,te.tv_nsec);
 	if(bj != -1){
 		printk(KERN_DEBUG "[inf packets] : [%d,%d][%ld.%ld->%ld.%ld]\n",bj,ej,sniffer[bj].te.tv_sec,sniffer[bj].te.tv_nsec,sniffer[ej].te.tv_sec,sniffer[ej].te.tv_nsec);
 	}
 	printk(KERN_DEBUG "[sum tranmit] : %ld.%ld\n",overall_busywait.tv_sec,overall_busywait.tv_nsec);
+*/
 /*	jump = 0;	
 	for (;; j=(j-1+HOLD_TIME)%HOLD_TIME){
 		jump = jump + 1;
@@ -480,7 +505,7 @@ int cal_inf(struct packet_info * p){
 		ampdu.num = 1;
 		ampdu.len = p->len;
     		memcpy(&last_p,p,sizeof(last_p));
-//		check_print(p);
+		check_print(p);
 //		printk(KERN_DEBUG "[  %d  ][%d]:%ld.%ld->%ld.%ld,size=%d,rate=%d,previous_is_ampdu=%d\n",p->ampdu,p->wlan_retry,p->tw.tv_sec,p->tw.tv_nsec,p->te.tv_sec,p->te.tv_nsec,p->len,p->phy_rate,previous_is_ampdu);
        		previous_is_ampdu = p->ampdu; 
 	}else if(p->ampdu==2){ //rest of packets of aggregation
@@ -507,8 +532,9 @@ int cal_inf(struct packet_info * p){
 		tmp2 = timespec_sub(tmp1,transmit);
 		dmaci = timespec_sub(tmp2,difs);
 		update_summary(dmaci,p->len,1);
+		summary.overall_extra_time = timespec_add(summary.overall_extra_time,tmp1);
 		divide_inf(store,th,p->te,dmaci,p->wlan_retry,0);
-//		check_print(p);
+		check_print(p);
 //	printk(KERN_DEBUG "[  %d  ][%d]:%ld.%ld->%ld.%ld,size=%d,rate=%d,previous_is_ampdu=%d,dmaci=%ld.%ld,th=%ld.%ld\n",p->ampdu,p->wlan_retry,p->tw.tv_sec,p->tw.tv_nsec,p->te.tv_sec,p->te.tv_nsec,p->len,p->phy_rate,previous_is_ampdu,dmaci.tv_sec,dmaci.tv_nsec,th.tv_sec,th.tv_nsec);
 		previous_is_ampdu = p->ampdu; 
 	}
