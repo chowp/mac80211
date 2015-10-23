@@ -340,7 +340,7 @@ struct timespec cal_dmaci_ampdu(){
 	summary.overall_extra_time = timespec_add(summary.overall_extra_time,tmp1);
 	tmp2 = timespec_sub(tmp1,transmit);
 	dmaci = timespec_sub(tmp2,difs);
-//	printk(KERN_DEBUG "[ampdu][ ]:%ld.%ld->%ld.%ld,size=%d,rate=%d,previous_is_ampdu=%d,dmaci=%ld.%ld,mpdu_num=%d,th=%ld.%ld\n",ampdu.tw.tv_sec,ampdu.tw.tv_nsec,ampdu.te.tv_sec,ampdu.te.tv_nsec,ampdu.len,ampdu.rate,previous_is_ampdu,dmaci.tv_sec,dmaci.tv_nsec,ampdu.num,ampdu.th.tv_sec,ampdu.th.tv_nsec);
+	printk(KERN_DEBUG "[ampdu]%ld.%ld,%d,%ld.%ld,%ld.%ld\n",ampdu.te.tv_sec,ampdu.te.tv_nsec,ampdu.rate,dmaci.tv_sec,dmaci.tv_nsec,tmp1.tv_sec,tmp1.tv_nsec);
 	return dmaci;
 }
 
@@ -366,7 +366,6 @@ void divide_inf(struct packet_info sniffer[],struct timespec th, struct timespec
 		clear_timespec(&tr);
                 tr = sniffer[j].te;
 		printk(KERN_DEBUG "[%ld.%ld-- %d -->%ld.%ld] \t [Jump.%d,No.%d] %ld.%ld\n",th.tv_sec,th.tv_nsec,ampdu_type,te.tv_sec,te.tv_nsec,jump,j,tr.tv_sec,tr.tv_nsec);
-
 	} */
 	jump = 0;
 	j = current_index;
@@ -413,7 +412,6 @@ void divide_inf(struct packet_info sniffer[],struct timespec th, struct timespec
 		clear_timespec(&tr);
                 tr = sniffer[j].te;
 		printk(KERN_DEBUG "[%ld.%ld-- %d -->%ld.%ld] \t [Jump.%d,No.%d] %ld.%ld\n",th.tv_sec,th.tv_nsec,ampdu_type,te.tv_sec,te.tv_nsec,jump,j,tr.tv_sec,tr.tv_nsec);
-
 	}*/
         //second round
 	jump = 0;
@@ -457,7 +455,7 @@ void check_print(struct packet_info *p){
         {
                 //print out
                 print_inf();
-		print_summay();
+		//print_summay();
 		memset(cs,0,sizeof(cs));
                 ht.tv_sec = 0;
 		ht.tv_nsec = 0;
@@ -493,6 +491,7 @@ int cal_inf(struct packet_info * p){
 			dmaci = cal_dmaci_ampdu();
 			update_summary(dmaci,ampdu.len*ampdu.num,ampdu.num);
 			divide_inf(backup_store,ampdu.th,ampdu.te,dmaci,0,1);
+			//printk(KERN_DEBUG "%ld.%ld->%ld.%ld,size=%d,rate=%d,previous_is_ampdu=%d\n",p->tw.tv_sec,p->tw.tv_nsec,p->te.tv_sec,p->te.tv_nsec,p->len,p->phy_rate,previous_is_ampdu);
 //			check_print(p);
 		}
 	}
@@ -535,7 +534,7 @@ int cal_inf(struct packet_info * p){
 		summary.overall_extra_time = timespec_add(summary.overall_extra_time,tmp1);
 		divide_inf(store,th,p->te,dmaci,p->wlan_retry,0);
 		check_print(p);
-//	printk(KERN_DEBUG "[  %d  ][%d]:%ld.%ld->%ld.%ld,size=%d,rate=%d,previous_is_ampdu=%d,dmaci=%ld.%ld,th=%ld.%ld\n",p->ampdu,p->wlan_retry,p->tw.tv_sec,p->tw.tv_nsec,p->te.tv_sec,p->te.tv_nsec,p->len,p->phy_rate,previous_is_ampdu,dmaci.tv_sec,dmaci.tv_nsec,th.tv_sec,th.tv_nsec);
+		printk(KERN_DEBUG "[unampdu]%ld.%ld,%d,%ld.%ld,%ld.%ld\n",p->te.tv_sec,p->te.tv_nsec,p->phy_rate,dmaci.tv_sec,dmaci.tv_nsec,tmp1.tv_sec,tmp1.tv_nsec);
 		previous_is_ampdu = p->ampdu; 
 	}
 //	printk(KERN_DEBUG "[  %d  ][%d]:%ld.%ld->%ld.%ld,size=%d,rate=%d,previous_is_ampdu=%d\n",p->ampdu,p->wlan_retry,p->tw.tv_sec,p->tw.tv_nsec,p->te.tv_sec,p->te.tv_nsec,p->len,p->phy_rate,previous_is_ampdu);
