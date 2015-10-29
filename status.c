@@ -920,26 +920,31 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 
 	/*wing get the packet info, mobisys*/
 	//parse_radiotap_header(skb->data,&ppp);
-	ppp.ampdu = 0;
+	if(skb->dev){
+		t_hello = wap_type(skb->dev->name);
+		ppp[t_hello].ifindex = skb->dev->ifindex;
+		memcpy(ppp[t_hello].dev_name,skb->dev->name,IFNAMSIZ);
+	}
+	ppp[t_hello].ampdu = 0;
 	if ((info->flags & IEEE80211_TX_CTL_AMPDU) &&
 	!(info->flags & IEEE80211_TX_STAT_AMPDU)) {
-		ppp.ampdu=2;
+		ppp[t_hello].ampdu=2;
 	}
 	if ((info->flags & IEEE80211_TX_CTL_AMPDU) &&
 	(info->flags & IEEE80211_TX_STAT_AMPDU)) {
-		ppp.ampdu=1;
+		ppp[t_hello].ampdu=1;
 	}
-	ppp.phy_rate = get_actual_tx_rate(skb,sband);
-	ppp.wlan_retry = retry_count;
-	ppp.len = skb->len;
-	ppp.tw.tv_sec = ktime_to_timespec(skb->tstamp).tv_sec;
-	ppp.tw.tv_nsec = ktime_to_timespec(skb->tstamp).tv_nsec;
+	ppp[t_hello].phy_rate = get_actual_tx_rate(skb,sband);
+	ppp[t_hello].wlan_retry = retry_count;
+	ppp[t_hello].len = skb->len;
+	ppp[t_hello].tw.tv_sec = ktime_to_timespec(skb->tstamp).tv_sec;
+	ppp[t_hello].tw.tv_nsec = ktime_to_timespec(skb->tstamp).tv_nsec;
 	struct timespec ts;
 	getnstimeofday(&ts);
-	ppp.te.tv_sec = ts.tv_sec;
-	ppp.te.tv_nsec = ts.tv_nsec;
+	ppp[t_hello].te.tv_sec = ts.tv_sec;
+	ppp[t_hello].te.tv_nsec = ts.tv_nsec;
        // printk(KERN_DEBUG "[mypacket]:%ld.%ld->%ld.%ld,len=%d\n",ppp.tw.tv_sec,ppp.tw.tv_nsec,ppp.te.tv_sec,ppp.te.tv_nsec,ppp.len);
-	cal_inf(&ppp);
+	cal_inf(&ppp[t_hello]);
 	/*wing get the packet info ends*/
 	/* XXX: is this sufficient for BPF? */
 	skb_set_mac_header(skb, 0);

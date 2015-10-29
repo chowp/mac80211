@@ -379,28 +379,6 @@ ieee80211_add_rx_radiotap_header(struct ieee80211_local *local,
 		*pos++ = chain;
 	}
 	
-	/*add by peichanghua, mobisys*/
-	/* fill the packet info and put it into the store*/
-	if (current_index == HOLD_TIME){
-		current_index = 0;
-	}else{
-		current_index = current_index + 1;
-	}
-	struct timespec ts;
-	getnstimeofday(&ts);
-	store[current_index].te.tv_sec = ts.tv_sec;
-	store[current_index].te.tv_nsec = ts.tv_nsec;
-	store[current_index].len = skb->len;
-	memcpy(store[current_index].wlan_src,ieee80211_get_SA(hdr),MAC_LEN);
-	memcpy(store[current_index].wlan_dst,ieee80211_get_DA(hdr),MAC_LEN);
-	summary.sniffer_bytes = summary.sniffer_bytes + store[current_index].len;
-	if(rate == NULL){
-		store[current_index].phy_rate=0;
-	}
-	else{
-		store[current_index].phy_rate=rate->bitrate;
-	}
-	
 //	printk(KERN_DEBUG "[neighbor]:index=%d,phy_rate=%d,len=%d,%ld.%ld\n",current_index,store[current_index].phy_rate,store[current_index].len,store[current_index].te.tv_sec,store[current_index].te.tv_nsec);	
 /*add by peichanghua ends*/
 }
@@ -420,6 +398,7 @@ ieee80211_rx_monitor(struct ieee80211_local *local, struct sk_buff *origskb,
 	struct sk_buff *skb, *skb2;
 	struct net_device *prev_dev = NULL;
 	int present_fcs_len = 0;
+	struct ieee80211_hdr *hdr = (struct ieee80211_hdr *)origskb->data; //add by peichanghua mobisys
 
 	/*
 	 * First, we may need to make a copy of the skb because
@@ -518,7 +497,41 @@ ieee80211_rx_monitor(struct ieee80211_local *local, struct sk_buff *origskb,
 		netif_receive_skb(skb);
 	} else
 		dev_kfree_skb(skb);
-
+	/* add by peichanghua mobisys*/
+	int index_pch = 0;
+	if (skb->dev){
+		t_hello = mon_type(skb->dev->name);
+		if (current_index[t_hello] == HOLD_TIME){
+			current_index[t_hello] = 0;
+		}else{
+			current_index[t_hello] = current_index[t_hello] + 1;
+		}
+		index_pch = current_index[t_hello];
+		memcpy(store[t_hello][index_pch].dev_name,skb->dev->name,IFNAMSIZ);
+		store[t_hello][index_pch].ifindex = skb->dev->ifindex;
+	}
+	if (current_index[t_hello] == HOLD_TIME){
+		current_index[t_hello] = 0;
+	}else{
+		current_index[t_hello] = current_index[t_hello] + 1;
+	}
+	index_pch = current_index[t_hello];
+	struct timespec ts;
+	getnstimeofday(&ts);
+	store[t_hello][index_pch].te.tv_sec = ts.tv_sec;
+	store[t_hello][index_pch].te.tv_nsec = ts.tv_nsec;
+	store[t_hello][index_pch].len = skb->len;
+	memcpy(store[t_hello][index_pch].wlan_src,ieee80211_get_SA(hdr),MAC_LEN);
+	memcpy(store[t_hello][index_pch].wlan_dst,ieee80211_get_DA(hdr),MAC_LEN);
+	summary[t_hello].sniffer_bytes = summary[t_hello].sniffer_bytes + store[t_hello][index_pch].len;
+	if(rate == NULL){
+		store[t_hello][index_pch].phy_rate=0;
+	}
+	else{
+		store[t_hello][index_pch].phy_rate=rate->bitrate;
+	}
+	//printk(KERN_DEBUG "[neighbor]%s\n",skb->dev->name);
+	/* add by peichanghua mobisys ends*/
 	return origskb;
 }
 
