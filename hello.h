@@ -45,6 +45,7 @@ struct summary_info{
 	int mine_bytes;
 	struct timespec  overall_extra_time;
 	struct timespec  overall_busywait;
+	struct timespec  rate_adaption_time;
 	int inf_num;
 };
 struct packet_info {
@@ -76,6 +77,7 @@ struct mpdu{
 	int num;
 	int len;
 	int rate;
+	int last_rate;
 	int ifindex;
 	unsigned char dev_addr[MAC_LEN];
 	char dev_name[IFNAMSIZ];

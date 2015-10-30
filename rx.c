@@ -501,6 +501,7 @@ ieee80211_rx_monitor(struct ieee80211_local *local, struct sk_buff *origskb,
 	int index_pch = 0;
 	if (skb->dev){
 		t_hello = mon_type(skb->dev->name);
+		//printk(KERN_DEBUG "[current_index]dev=%s,type=%d\n",skb->dev->name,t_hello);
 		if (current_index[t_hello] == HOLD_TIME){
 			current_index[t_hello] = 0;
 		}else{
@@ -509,26 +510,22 @@ ieee80211_rx_monitor(struct ieee80211_local *local, struct sk_buff *origskb,
 		index_pch = current_index[t_hello];
 		memcpy(store[t_hello][index_pch].dev_name,skb->dev->name,IFNAMSIZ);
 		store[t_hello][index_pch].ifindex = skb->dev->ifindex;
-	}
-	if (current_index[t_hello] == HOLD_TIME){
-		current_index[t_hello] = 0;
+		struct timespec ts;
+		getnstimeofday(&ts);
+		store[t_hello][index_pch].te.tv_sec = ts.tv_sec;
+		store[t_hello][index_pch].te.tv_nsec = ts.tv_nsec;
+		store[t_hello][index_pch].len = skb->len;
+		memcpy(store[t_hello][index_pch].wlan_src,ieee80211_get_SA(hdr),MAC_LEN);
+		memcpy(store[t_hello][index_pch].wlan_dst,ieee80211_get_DA(hdr),MAC_LEN);
+		summary[t_hello].sniffer_bytes = summary[t_hello].sniffer_bytes + store[t_hello][index_pch].len;
+		if(rate == NULL){
+			store[t_hello][index_pch].phy_rate=0;
+		}
+		else{
+			store[t_hello][index_pch].phy_rate=rate->bitrate;
+		}
 	}else{
-		current_index[t_hello] = current_index[t_hello] + 1;
-	}
-	index_pch = current_index[t_hello];
-	struct timespec ts;
-	getnstimeofday(&ts);
-	store[t_hello][index_pch].te.tv_sec = ts.tv_sec;
-	store[t_hello][index_pch].te.tv_nsec = ts.tv_nsec;
-	store[t_hello][index_pch].len = skb->len;
-	memcpy(store[t_hello][index_pch].wlan_src,ieee80211_get_SA(hdr),MAC_LEN);
-	memcpy(store[t_hello][index_pch].wlan_dst,ieee80211_get_DA(hdr),MAC_LEN);
-	summary[t_hello].sniffer_bytes = summary[t_hello].sniffer_bytes + store[t_hello][index_pch].len;
-	if(rate == NULL){
-		store[t_hello][index_pch].phy_rate=0;
-	}
-	else{
-		store[t_hello][index_pch].phy_rate=rate->bitrate;
+		printk(KERN_DEBUG "This packet from unkonw sniffer devicess!\n");
 	}
 	//printk(KERN_DEBUG "[neighbor]%s\n",skb->dev->name);
 	/* add by peichanghua mobisys ends*/

@@ -922,6 +922,7 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 	//parse_radiotap_header(skb->data,&ppp);
 	if(skb->dev){
 		t_hello = wap_type(skb->dev->name);
+		//printk(KERN_DEBUG "[ppp]dev=%s,type=%d\n",skb->dev->name,t_hello);
 		ppp[t_hello].ifindex = skb->dev->ifindex;
 		memcpy(ppp[t_hello].dev_name,skb->dev->name,IFNAMSIZ);
 	}
