@@ -37,6 +37,10 @@ struct inf_info {
 	unsigned char wlan_src[MAC_LEN];
 	unsigned char wlan_dst[MAC_LEN];
 };
+struct rate_history_type{
+	struct timespec te;
+	int phy_rate;
+};
 struct summary_info{
 	int sniffer_bytes;
 	int  inf_packets;
@@ -99,6 +103,8 @@ extern struct timespec inf_start_timestamp;
 extern struct mpdu ampdu[WLAN_NUM];
 extern int t_hello ;
 
+extern struct rate_history_type rate_history[WLAN_NUM][HOLD_TIME];
+extern int rate_history_index[WLAN_NUM] ;
 /*declaration of function*/
 //extern int parse_80211_header(const unsigned char * buf,  struct packet_info* p);
 //extern int parse_radiotap_header(unsigned char * buf,  struct packet_info* p);
