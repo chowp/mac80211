@@ -6,6 +6,7 @@
 #define true 1
 #define false 0
 int t_hello = 0;
+int CONST_TIME[WLAN_NUM]={38,50};
 struct packet_info store[WLAN_NUM][HOLD_TIME] = {0};
 struct packet_info backup_store[WLAN_NUM][HOLD_TIME] = {0};
 int current_index[WLAN_NUM] = {0} ;
@@ -18,6 +19,9 @@ struct timespec  ht[WLAN_NUM] = {0};
 struct timespec  inf_start_timestamp = {0};
 struct timespec  inf_end_timestamp  = {0};
 struct mpdu ampdu[WLAN_NUM]={0};
+
+struct rate_history_type rate_history[WLAN_NUM][HOLD_TIME] = {0};
+int rate_history_index[WLAN_NUM] = {0};
 /* rate in 100kbps */
 int wap_type(char ifname[]){
 	if( ifname[0]=='w' && ifname[4]=='0')
@@ -258,6 +262,10 @@ bool non_control_packet(char mac1[13], char mac2[13]){
 Insert a packet to the carrier sense or hidden teriminal list
 */
 void update_list( unsigned char mac1[6], unsigned char mac2[6],struct timespec  value,int t){
+	struct timespec tmp1 = {0};
+	if(timespec_compare(&value,&tmp1)<0){
+		printk(KERN_DEBUG "[warning]There exists negtive dmac!\n");
+	}
 	int i;
         char mac11[13];
 	char mac22[13];
@@ -371,7 +379,7 @@ struct timespec cal_dmaci_ampdu(int t){
 	}
 	transmit = cal_transmit_time(ampdu[t].len*ampdu[t].num,ampdu[t].rate);
         difs.tv_sec =0;
-	difs.tv_nsec = CONST_TIME_24*1000;
+	difs.tv_nsec = CONST_TIME[t]*1000;
 	tmp1 = timespec_sub(ampdu[t].te,ampdu[t].th);
 	tmp2 = timespec_sub(tmp1,transmit);
 	dmaci = timespec_sub(tmp2,difs);
@@ -609,7 +617,7 @@ int cal_inf(struct packet_info * p){
 		}
         	transmit = cal_transmit_time(p->len,p->phy_rate);
 		difs.tv_sec =0;
-		difs.tv_nsec = CONST_TIME_24*1000;
+		difs.tv_nsec = CONST_TIME[t]*1000;
 		tmp1 = timespec_sub(p->te,th);
 		tmp2 = timespec_sub(tmp1,transmit);
 		dmaci = timespec_sub(tmp2,difs);
