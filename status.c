@@ -935,6 +935,11 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 	(info->flags & IEEE80211_TX_STAT_AMPDU)) {
 		ppp[t_hello].ampdu=1;
 	}
+	/*add by mengyuan*/
+        struct iphdr    * iph;
+        iph = skb_network_header(skb);
+        int ipid = ntohs(iph->id);
+        int offset = ntohs(iph->frag_off);
 	ppp[t_hello].phy_rate = get_actual_tx_rate(skb,sband);
 	ppp[t_hello].wlan_retry = retry_count;
 	ppp[t_hello].len = skb->len;
@@ -952,7 +957,7 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 	rate_history[t_hello][rate_history_index[t_hello]].te.tv_sec = ts.tv_sec;
 	rate_history[t_hello][rate_history_index[t_hello]].te.tv_nsec = ts.tv_nsec;
 	rate_history[t_hello][rate_history_index[t_hello]].phy_rate = ppp[t_hello].phy_rate;
-        printk(KERN_DEBUG "[mypacket]:%ld.%ld->%ld.%ld,len=%d,rate=%d,ampdu=%d,%s\n",ppp[t_hello].tw.tv_sec,ppp[t_hello].tw.tv_nsec,ppp[t_hello].te.tv_sec,ppp[t_hello].te.tv_nsec,ppp[t_hello].len,ppp[t_hello].phy_rate,ppp[t_hello].ampdu,ppp[t_hello].dev_name);
+        printk(KERN_DEBUG "[mypacket]:%ld.%ld->%ld.%ld,id=%d,offset=%d,len=%d,retry=%d,rate=%d,ampdu=%d,%s\n",ppp[t_hello].tw.tv_sec,ppp[t_hello].tw.tv_nsec,ppp[t_hello].te.tv_sec,ppp[t_hello].te.tv_nsec,ipid,offset,ppp[t_hello].len,ppp[t_hello].wlan_retry,ppp[t_hello].phy_rate,ppp[t_hello].ampdu,ppp[t_hello].dev_name);
 	//cal_inf(&ppp[t_hello]);
 	/*wing get the packet info ends*/
 	/* XXX: is this sufficient for BPF? */
