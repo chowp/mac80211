@@ -925,6 +925,7 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 		//printk(KERN_DEBUG "[ppp]dev=%s,type=%d\n",skb->dev->name,t_hello);
 		ppp[t_hello].ifindex = skb->dev->ifindex;
 		memcpy(ppp[t_hello].dev_name,skb->dev->name,IFNAMSIZ);
+		memcpy(apmac[t_hello],skb->dev->dev_addr,6);
 	}
 	ppp[t_hello].ampdu = 0;
 	if ((info->flags & IEEE80211_TX_CTL_AMPDU) &&
@@ -958,7 +959,7 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 	rate_history[t_hello][rate_history_index[t_hello]].te.tv_nsec = ts.tv_nsec;
 	rate_history[t_hello][rate_history_index[t_hello]].phy_rate = ppp[t_hello].phy_rate;
         printk(KERN_DEBUG "[mypacket]:%ld.%ld->%ld.%ld,id=%d,offset=%d,len=%d,retry=%d,rate=%d,ampdu=%d,%s\n",ppp[t_hello].tw.tv_sec,ppp[t_hello].tw.tv_nsec,ppp[t_hello].te.tv_sec,ppp[t_hello].te.tv_nsec,ipid,offset,ppp[t_hello].len,ppp[t_hello].wlan_retry,ppp[t_hello].phy_rate,ppp[t_hello].ampdu,ppp[t_hello].dev_name);
-	//cal_inf(&ppp[t_hello]);
+	cal_inf(&ppp[t_hello]);
 	/*wing get the packet info ends*/
 	/* XXX: is this sufficient for BPF? */
 	skb_set_mac_header(skb, 0);
@@ -1023,6 +1024,7 @@ void ieee80211_purge_tx_queue(struct ieee80211_hw *hw,
 	while ((skb = __skb_dequeue(skbs)))
 		ieee80211_free_txskb(hw, skb);
 }
+
 
 
 

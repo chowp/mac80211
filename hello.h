@@ -103,6 +103,7 @@ extern struct timespec inf_start_timestamp;
 extern struct mpdu ampdu[WLAN_NUM];
 extern int t_hello ;
 extern int CONST_TIME[WLAN_NUM];
+extern unsigned char apmac[WLAN_NUM][MAC_LEN];
 
 extern struct rate_history_type rate_history[WLAN_NUM][HOLD_TIME];
 extern int rate_history_index[WLAN_NUM] ;
