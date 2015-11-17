@@ -682,7 +682,18 @@ int get_actual_tx_rate(struct sk_buff *skb, struct ieee80211_supported_band *sba
 	}
 	
 }
-
+/* 
+ * mobisys 
+ * just for print
+ */
+char *
+ether_sprintf_test_status(unsigned char *mac)
+{
+	static char output[13];
+        snprintf(output, sizeof(output), "%02x%02x%02x%02x%02x%02x\0",
+                mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+	return output;
+}
 // add by peichanghua mobisys ends
 void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 {
@@ -919,13 +930,12 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 					 rtap_len, shift);
 
 	/*wing get the packet info, mobisys*/
-	//parse_radiotap_header(skb->data,&ppp);
 	if(skb->dev){
 		t_hello = wap_type(skb->dev->name);
-		//printk(KERN_DEBUG "[ppp]dev=%s,type=%d\n",skb->dev->name,t_hello);
 		ppp[t_hello].ifindex = skb->dev->ifindex;
 		memcpy(ppp[t_hello].dev_name,skb->dev->name,IFNAMSIZ);
 		memcpy(apmac[t_hello],skb->dev->dev_addr,6);
+//		printk(KERN_DEBUG "[ppp]dev=%s,type=%d,ap_mac=%s\n",skb->dev->name,t_hello,ether_sprintf_test_status(apmac[t_hello]));
 	}
 	ppp[t_hello].ampdu = 0;
 	if ((info->flags & IEEE80211_TX_CTL_AMPDU) &&
@@ -958,7 +968,7 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 	rate_history[t_hello][rate_history_index[t_hello]].te.tv_sec = ts.tv_sec;
 	rate_history[t_hello][rate_history_index[t_hello]].te.tv_nsec = ts.tv_nsec;
 	rate_history[t_hello][rate_history_index[t_hello]].phy_rate = ppp[t_hello].phy_rate;
-        printk(KERN_DEBUG "[mypacket]:%ld.%ld->%ld.%ld,id=%d,offset=%d,len=%d,retry=%d,rate=%d,ampdu=%d,%s\n",ppp[t_hello].tw.tv_sec,ppp[t_hello].tw.tv_nsec,ppp[t_hello].te.tv_sec,ppp[t_hello].te.tv_nsec,ipid,offset,ppp[t_hello].len,ppp[t_hello].wlan_retry,ppp[t_hello].phy_rate,ppp[t_hello].ampdu,ppp[t_hello].dev_name);
+        //printk(KERN_DEBUG "[mypacket]:%ld.%ld->%ld.%ld,id=%d,offset=%d,len=%d,retry=%d,rate=%d,ampdu=%d,%s\n",ppp[t_hello].tw.tv_sec,ppp[t_hello].tw.tv_nsec,ppp[t_hello].te.tv_sec,ppp[t_hello].te.tv_nsec,ipid,offset,ppp[t_hello].len,ppp[t_hello].wlan_retry,ppp[t_hello].phy_rate,ppp[t_hello].ampdu,ppp[t_hello].dev_name);
 	cal_inf(&ppp[t_hello]);
 	/*wing get the packet info ends*/
 	/* XXX: is this sufficient for BPF? */

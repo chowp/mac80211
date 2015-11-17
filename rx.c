@@ -384,6 +384,173 @@ ieee80211_add_rx_radiotap_header(struct ieee80211_local *local,
 }
 
 /*
+ * this is add by peichanghua
+ * mobisys, get bssid and wifi client's addr
+ */
+
+static inline u8 *ieee80211_get_SA_pch(struct ieee80211_hdr *hdr)
+{
+	u8 *raw = (u8 *) hdr;
+	u8 tofrom = (*(raw+1)) & 3; /* get the TODS and FROMDS bits */
+
+	switch (tofrom) {
+		case 2:
+			return hdr->addr2; /*from ds=1 to ds =0 ,so get bssid as source*/
+		case 3:
+			return hdr->addr4;
+	}
+	return hdr->addr2;
+}
+
+static inline u8 *ieee80211_get_DA_pch(struct ieee80211_hdr *hdr)
+{
+	u8 *raw = (u8 *) hdr;
+	//u8 to_ds = (*(raw+1)) & 1; /* get the TODS bit */
+
+	//if (to_ds)
+	//	return hdr->addr1; /*to ds = 1,so get bssid as destination*/
+	return hdr->addr1;
+}
+/****
+ * this function is only usedfor debu, if you see this,
+ * it means this function is forgoton to be deleted
+*/
+char *
+ether_sprintf_test_rx(unsigned char *mac)
+{
+        static char output_r1[13]={0};
+        snprintf(output_r1, sizeof(output_r1), "%02x%02x%02x%02x%02x%02x\0",
+                mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+        return output_r1;
+}
+char *
+ether_sprintf_test_rx2(unsigned char *mac)
+{
+        static char output_r2[13]={0};
+        snprintf(output_r2, sizeof(output_r2), "%02x%02x%02x%02x%02x%02x\0",
+                mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+        return output_r2;
+}
+
+int parse_80211_header(struct ieee80211_hdr * wh,struct ieee80211_mgmt* whm,int band_type){
+	//struct ieee80211_hdr* wh;
+	//struct ieee80211_mgmt* whm;
+	int hdrlen = 0;
+	u8 * sa = NULL;
+	u8 * da = NULL;
+	u8 sa_zero[6] = {0};
+	u8 da_zero[6] = {0};
+	u16 fc;
+	u16 type;
+
+
+	//wh = (struct ieee80211_hdr*)buf;
+	fc = le16toh(wh->frame_control);
+	//hdrlen = ieee80211_get_hdrlen(fc); //no need
+
+	type = (fc & (IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE));
+	
+	switch (type & IEEE80211_FCTL_FTYPE) {
+	case IEEE80211_FTYPE_DATA:
+		sa = ieee80211_get_SA_pch(wh);
+		da = ieee80211_get_DA_pch(wh);
+		break;
+
+	case IEEE80211_FTYPE_CTL:
+		switch (type & IEEE80211_FCTL_STYPE) {
+		case IEEE80211_STYPE_RTS:
+			sa = wh->addr2;
+			da = wh->addr1;
+			break;
+
+		case IEEE80211_STYPE_CTS:
+			da = wh->addr1;
+			break;
+
+		case IEEE80211_STYPE_ACK:
+			da = wh->addr1;
+			break;
+
+		case IEEE80211_STYPE_PSPOLL:
+			sa = wh->addr2;
+			break;
+
+		case IEEE80211_STYPE_CFEND:
+		case IEEE80211_STYPE_CFENDACK:
+			da = wh->addr1;
+			sa = wh->addr2;
+			break;
+
+		case IEEE80211_STYPE_BACK_REQ:
+		case IEEE80211_STYPE_BACK:
+			da = wh->addr1;
+			sa = wh->addr2;
+		}
+		break;
+
+	case IEEE80211_FTYPE_MGMT:
+		//whm = (struct ieee80211_mgmt*)wh;
+		sa = whm->sa;
+		da = whm->da;
+		break;
+	
+	}
+	if(sa == NULL){
+	//	sa = ieee80211_get_SA(wh);
+		sa = sa_zero;
+	}
+	if(da == NULL){
+	//	da = ieee80211_get_DA(wh);
+		da = da_zero;
+	}
+	int index = 0;
+	if(str_equal(ether_sprintf_test_rx(apmac[band_type]),ether_sprintf_test_rx2(sa),2*MAC_LEN) == 1){
+		if (current_index[band_type] == HOLD_TIME){
+			current_index[band_type] = 0;
+		}else{
+			current_index[band_type] = current_index[band_type] + 1;
+		}
+		index = current_index[band_type];
+		if (sa != NULL) {
+			memcpy(store[band_type][index].wlan_src, sa, MAC_LEN);
+		}
+		if (da != NULL) {
+			memcpy(store[band_type][index].wlan_dst, da, MAC_LEN);
+		}
+		return 0;
+	}else if(str_equal(ether_sprintf_test_rx(apmac[band_type]),ether_sprintf_test_rx2(da),2*MAC_LEN) == 1 ){
+		if (current_index[band_type] == HOLD_TIME){
+			current_index[band_type] = 0;
+		}else{
+			current_index[band_type] = current_index[band_type] + 1;
+		}
+		index = current_index[band_type];
+		if (sa != NULL) {
+			memcpy(store[band_type][index].wlan_src, sa, MAC_LEN);
+		}
+		if (da != NULL) {
+			memcpy(store[band_type][index].wlan_dst, da, MAC_LEN);
+		}
+		return 0;
+	}else{
+		if (current_index[band_type] == HOLD_TIME){
+			current_index[band_type] = 0;
+		}else{
+			current_index[band_type] = current_index[band_type] + 1;
+		}
+		index = current_index[band_type];
+		if (sa != NULL) {
+			memcpy(store[band_type][index].wlan_src, sa, MAC_LEN);
+		}
+		if (da != NULL) {
+			memcpy(store[band_type][index].wlan_dst, da, MAC_LEN);
+		}
+		return 1;
+	}
+	
+}
+
+/*
  * This function copies a received frame to all monitor interfaces and
  * returns a cleaned-up SKB that no longer includes the FCS nor the
  * radiotap header the driver might have added.
@@ -399,6 +566,7 @@ ieee80211_rx_monitor(struct ieee80211_local *local, struct sk_buff *origskb,
 	struct net_device *prev_dev = NULL;
 	int present_fcs_len = 0;
 	struct ieee80211_hdr *hdr = (struct ieee80211_hdr *)origskb->data; //add by peichanghua mobisys
+	struct ieee80211_mgmt *whm = (struct ieee80211_mgmt *)origskb->data;//add by peichanghua mobisys
 
 	/*
 	 * First, we may need to make a copy of the skb because
@@ -501,15 +669,7 @@ ieee80211_rx_monitor(struct ieee80211_local *local, struct sk_buff *origskb,
 	int index_pch = 0;
 	if (skb->dev ){
 		t_hello = mon_type(skb->dev->name);
-		if(ether_addr_equal(apmac[t_hello],ieee80211_get_SA(hdr))){
-		}else if(ether_addr_equal(apmac[t_hello],ieee80211_get_DA(hdr))){
-		}else{
-			//printk(KERN_DEBUG "[current_index]dev=%s,type=%d\n",skb->dev->name,t_hello);
-			if (current_index[t_hello] == HOLD_TIME){
-				current_index[t_hello] = 0;
-			}else{
-				current_index[t_hello] = current_index[t_hello] + 1;
-			}
+		if (parse_80211_header(hdr,whm,t_hello) == 0){	
 			index_pch = current_index[t_hello];
 			memcpy(store[t_hello][index_pch].dev_name,skb->dev->name,IFNAMSIZ);
 			store[t_hello][index_pch].ifindex = skb->dev->ifindex;
@@ -518,8 +678,6 @@ ieee80211_rx_monitor(struct ieee80211_local *local, struct sk_buff *origskb,
 			store[t_hello][index_pch].te.tv_sec = ts.tv_sec;
 			store[t_hello][index_pch].te.tv_nsec = ts.tv_nsec;
 			store[t_hello][index_pch].len = skb->len;
-			memcpy(store[t_hello][index_pch].wlan_src,ieee80211_get_SA(hdr),MAC_LEN);
-			memcpy(store[t_hello][index_pch].wlan_dst,ieee80211_get_DA(hdr),MAC_LEN);
 			summary[t_hello].sniffer_bytes = summary[t_hello].sniffer_bytes + store[t_hello][index_pch].len;
 			if(rate == NULL){
 			store[t_hello][index_pch].phy_rate=0;
@@ -527,11 +685,11 @@ ieee80211_rx_monitor(struct ieee80211_local *local, struct sk_buff *origskb,
 			else{
 				store[t_hello][index_pch].phy_rate=rate->bitrate;
 			}
+			printk(KERN_DEBUG "[current_index]dev=%s,type=%d,%ld.%ld,%ld,%ld,wlan_src=%s,wlan_dst=%s\n",skb->dev->name,t_hello,ktime_to_timespec(skb->tstamp).tv_sec,ktime_to_timespec(skb->tstamp).tv_nsec,ts.tv_sec,ts.tv_nsec,ether_sprintf_test_rx(store[t_hello][index_pch].wlan_src),ether_sprintf_test_rx2(store[t_hello][index_pch].wlan_dst));
 		}
 	}else{
 		printk(KERN_DEBUG "This packet from unkonw sniffer devicess!\n");
 	}
-	//printk(KERN_DEBUG "[neighbor]%s\n",skb->dev->name);
 	/* add by peichanghua mobisys ends*/
 	return origskb;
 }

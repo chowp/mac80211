@@ -6,7 +6,7 @@
 #define true 1
 #define false 0
 int t_hello = 0;
-int CONST_TIME[WLAN_NUM]={38,50};
+int CONST_TIME[WLAN_NUM]={200,212};
 struct packet_info store[WLAN_NUM][HOLD_TIME] = {0};
 struct packet_info backup_store[WLAN_NUM][HOLD_TIME] = {0};
 int current_index[WLAN_NUM] = {0} ;
@@ -145,7 +145,7 @@ pch_print(unsigned char *mac){
 char *
 ether_sprintf_test(unsigned char *mac)
 {
-	static char output[13];
+	static char output[13]={0};
         snprintf(output, sizeof(output), "%02x%02x%02x%02x%02x%02x\0",
                 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 	return output;
@@ -153,7 +153,7 @@ ether_sprintf_test(unsigned char *mac)
 char *
 ether_sprintf_test2(unsigned char *mac)
 {
-	static char output2[13];
+	static char output2[13]={0};
         snprintf(output2, sizeof(output2), "%02x%02x%02x%02x%02x%02x\0",
                 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 	return output2;
@@ -161,7 +161,7 @@ ether_sprintf_test2(unsigned char *mac)
 char *
 ether_sprintf_test3(unsigned char *mac)
 {
-	static char output3[13];
+	static char output3[13]={0};
         snprintf(output3, sizeof(output3), "%02x%02x%02x%02x%02x%02x\0",
                 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 	return output3;
@@ -169,7 +169,7 @@ ether_sprintf_test3(unsigned char *mac)
 char *
 ether_sprintf_test4(unsigned char *mac)
 {
-	static char output4[13];
+	static char output4[13]={0};
         snprintf(output4, sizeof(output4), "%02x%02x%02x%02x%02x%02x\0",
                 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 	return output4;
@@ -253,48 +253,55 @@ int str_equal(char *s1,char *s2,int len){
 }
 
 /*
+To judge whether the current packet are broadcast, cts, ack or control packet(\gamma)
+*/
+bool control_address(char mac1[13]){
+ 	if (str_equal(mac_zero,mac1,2*MAC_LEN) == 1)
+                return true;
+ 	if (str_equal(mac_ffff,mac1,2*MAC_LEN) == 1)
+                return true;
+        return false;
+}
+/*
 To check whether the current packet is in the cs list(\gamma)
 */
 bool matched(char src[13], char dst[13], char  mac1[13],char mac2[13]){
-
-	if ( (str_equal(mac1,src,2*MAC_LEN) != 1) &&
-           (str_equal(mac1,dst,2*MAC_LEN) != 1) )
-                return false;
-        if ( (str_equal(mac2,src,2*MAC_LEN) != 1) &&
-           (str_equal(mac2,dst,2*MAC_LEN) != 1) )
-                return false;
-        return true;
-}
-/*
-To judge whether the current packet are broadcast, cts, ack or control packet(\gamma)
-*/
-bool non_control_packet(char mac1[13], char mac2[13]){
- 	if (str_equal(mac_zero,mac1,2*MAC_LEN) == 1)
-                return false;
-   	if (str_equal(mac_zero,mac2,2*MAC_LEN) == 1)
-                return false;
-        return true;
+	if ( (str_equal(mac_zero,mac1,2*MAC_LEN) == 1) &&
+           (str_equal(mac_zero,mac2,2*MAC_LEN) == 1) )
+                return false;    // not vavid data
+	if ((control_address(mac1) == 1) &&
+	   (  (str_equal(mac2,src,2*MAC_LEN) == 1)||(str_equal(mac2,dst,2*MAC_LEN) == 1) ))
+		return true;
+	if ((control_address(mac2) == 1) &&
+	   (  (str_equal(mac1,src,2*MAC_LEN) == 1)||(str_equal(mac1,dst,2*MAC_LEN) == 1) ))
+		return true;
+	
+	
+	if ( (str_equal(mac1,src,2*MAC_LEN) == 1) &&
+           (str_equal(mac2,dst,2*MAC_LEN) == 1) )
+                return true;
+        if ( (str_equal(mac1,dst,2*MAC_LEN) == 1) &&
+           (str_equal(mac2,src,2*MAC_LEN) == 1) )
+                return true;
+        return false;
 }
 /*
 Insert a packet to the carrier sense or hidden teriminal list
 */
 void update_list( unsigned char mac1[6], unsigned char mac2[6],struct timespec  value,int t){
+	printk(KERN_DEBUG "mac1=%s,mac2=%s\n",ether_sprintf_test(mac1),ether_sprintf_test2(mac2));
 	struct timespec tmp1 = {0};
 	if(timespec_compare(&value,&tmp1)<0){
 		printk(KERN_DEBUG "[warning]There exists negtive dmac!\n");
 	}
 	int i;
-        char mac11[13];
-	char mac22[13];
 	struct inf_info * tmp;
-	ether_sprintf(mac1,mac11);
-	ether_sprintf(mac2,mac22);
 	//printk(KERN_DEBUG "%s<-1->%s:+:%ld.%ld\n",ether_sprintf_test(mac1),ether_sprintf_test2(mac2),value.tv_sec,value.tv_nsec);
 	//printk(KERN_DEBUG "%s<-2->%s:+:%ld.%ld\n",mac11,mac22,value.tv_sec,value.tv_nsec);
 	for(i=0;i<CS_NUMBER;i++){
                 tmp = (struct inf_info *)&cs[t][i];
 		if( (tmp->value.tv_nsec != 0) && 
-		    (non_control_packet(ether_sprintf_test(mac1),ether_sprintf_test2(mac2)) == true) &&
+		   // (non_control_packet(ether_sprintf_test(mac1),ether_sprintf_test2(mac2)) == true) &&
                     (matched(ether_sprintf_test3(tmp->wlan_src),ether_sprintf_test4(tmp->wlan_dst),ether_sprintf_test(mac1),ether_sprintf_test2(mac2)) == true) ){
                        tmp->value = timespec_add(tmp->value,value);
 			return;
@@ -304,11 +311,11 @@ void update_list( unsigned char mac1[6], unsigned char mac2[6],struct timespec  
         for(i=0;i<CS_NUMBER;i++)
         {
                 tmp = (struct inf_info *)&cs[t][i];
-                if (cs[t][i].value.tv_nsec == 0 )
+                if( (cs[t][i].value.tv_nsec == 0 ) && (control_address(ether_sprintf_test(mac1))== 0)&& (control_address(ether_sprintf_test2(mac2))))
                 {
                         memcpy(cs[t][i].wlan_src,mac1,MAC_LEN);
                         memcpy(cs[t][i].wlan_dst,mac2,MAC_LEN);
-
+			printk(KERN_DEBUG "cs[%d][%d],wlan_src=%s,wlan_dst=%s\n",t,i,ether_sprintf_test(cs[t][i].wlan_src),ether_sprintf_test2(cs[t][i].wlan_dst));
                         cs[t][i].value = value;
                         summary[t].inf_num = summary[t].inf_num + 1;
                         return; 
@@ -383,14 +390,14 @@ void copy_timespec(struct timespec * dst, struct timespec * src){
 }
 struct timespec cal_transmit_time(int len, int rate){
 	struct timespec trans= {0};
-	int trans_tmp = 0;
+	unsigned long  trans_tmp = 0;
 	//checkpoint
 	if (rate == 0){
 		return trans;
 	}
-	trans_tmp = len*8*10*1000/rate; // nano seconds
+	trans_tmp = (unsigned long)len*8*10*1000/(unsigned long)rate; // nano seconds
 	trans.tv_sec  = trans_tmp/1000000000;
-	trans.tv_nsec = trans_tmp%1000000000;
+	trans.tv_nsec = (long int)(trans_tmp%1000000000);
 	return trans;
 }
 struct timespec cal_dmaci_ampdu(int t){
@@ -405,12 +412,15 @@ struct timespec cal_dmaci_ampdu(int t){
 	tmp1 = timespec_sub(ampdu[t].te,ampdu[t].th);
 	tmp2 = timespec_sub(tmp1,transmit);
 	dmaci = timespec_sub(tmp2,difs);
-	//printk(KERN_DEBUG "[ampdu]%ld.%ld,%d,%ld.%ld,%ld.%ld,ifindex=%d,%s,num=%d,size=%d\n",ampdu[t].te.tv_sec,ampdu[t].te.tv_nsec,ampdu[t].rate,dmaci.tv_sec,dmaci.tv_nsec,tmp1.tv_sec,tmp1.tv_nsec,ampdu[t].ifindex,ampdu[t].dev_name,ampdu[t].num,ampdu[t].len);
+	struct timespec ts_tmp;
+	getnstimeofday(&ts_tmp);
+
 	//checkpoint
 	if (dmaci.tv_sec < 0 || dmaci.tv_nsec < 0){
 		dmaci.tv_sec = 0;
 		dmaci.tv_nsec = 0;
 	}
+	printk(KERN_DEBUG "[ampdu,%ld.%ld]%ld.%ld,%d,%ld.%ld,%ld.%ld,ifindex=%d,%s,num=%d,size=%d,retry=%d\n",ts_tmp.tv_sec,ts_tmp.tv_nsec,ampdu[t].te.tv_sec,ampdu[t].te.tv_nsec,ampdu[t].rate,dmaci.tv_sec,dmaci.tv_nsec,tmp1.tv_sec,tmp1.tv_nsec,ampdu[t].ifindex,ampdu[t].dev_name,ampdu[t].num,ampdu[t].len,ampdu[t].retry);
 	return dmaci;
 }
 
@@ -628,7 +638,8 @@ int cal_inf(struct packet_info * p){
 		}
 	}else{
 		// non-aggregation packet
-		th = p->tw;
+		th.tv_sec = p->tw.tv_sec;
+		th.tv_nsec = p->tw.tv_nsec;
 		if (timespec_compare(&th,&last_p[t].te)<0){
 			th=last_p[t].te;
 		}
@@ -648,7 +659,7 @@ int cal_inf(struct packet_info * p){
 		tmp1 = timespec_sub(p->te,th);
 		tmp2 = timespec_sub(tmp1,transmit);
 		dmaci = timespec_sub(tmp2,difs);
-		//printk(KERN_DEBUG "[unampdu]%ld.%ld,%d,%ld.%ld,%ld.%ld,ifindex=%d,%s,num=%d,size=%d\n",p->te.tv_sec,p->te.tv_nsec,p->phy_rate,dmaci.tv_sec,dmaci.tv_nsec,tmp1.tv_sec,tmp1.tv_nsec,p->ifindex,p->dev_name,1,p->len);
+		printk(KERN_DEBUG "[unampdu]%ld.%ld,%d,%ld.%ld,%ld.%ld,ifindex=%d,%s,num=%d,size=%d,retry=%d\n",p->te.tv_sec,p->te.tv_nsec,p->phy_rate,dmaci.tv_sec,dmaci.tv_nsec,tmp1.tv_sec,tmp1.tv_nsec,p->ifindex,p->dev_name,1,p->len,p->wlan_retry);
 		if (dmaci.tv_sec < 0 || dmaci.tv_nsec < 0){
 			dmaci.tv_sec = 0;
 			dmaci.tv_nsec = 0;

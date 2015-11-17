@@ -27,7 +27,7 @@
 const static char mac_zero[12] = "000000000000";
 const static char mac_ffff[12] = "FFFFFFFFFFFF";
 
-static int FREQUENT_UPDATE_PERIOD_SECONDS = 2;
+static int FREQUENT_UPDATE_PERIOD_SECONDS = 60;
 //int tolower(char c){
 //	return c-'A' + 'a';
 //}
@@ -114,3 +114,4 @@ int cal_inf(struct packet_info * p);
 int mcs_index_to_rate(int mcs,int ht20, int lgi);
 int wap_type(char test[]);
 int mon_type(char test[]);
+int str_equal(char *s1, char *s2,int len);
