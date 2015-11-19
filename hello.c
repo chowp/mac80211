@@ -21,8 +21,6 @@ struct timespec  inf_end_timestamp  = {0};
 struct mpdu ampdu[WLAN_NUM]={0};
 unsigned char apmac[WLAN_NUM][MAC_LEN]={0};
 
-struct rate_history_type rate_history[WLAN_NUM][HOLD_TIME] = {0};
-int rate_history_index[WLAN_NUM] = {0};
 /* rate in 100kbps */
 int wap_type(char ifname[]){
 	if( ifname[0]=='w' && ifname[4]=='0')
@@ -289,15 +287,12 @@ bool matched(char src[13], char dst[13], char  mac1[13],char mac2[13]){
 Insert a packet to the carrier sense or hidden teriminal list
 */
 void update_list( unsigned char mac1[6], unsigned char mac2[6],struct timespec  value,int t){
-	printk(KERN_DEBUG "mac1=%s,mac2=%s\n",ether_sprintf_test(mac1),ether_sprintf_test2(mac2));
 	struct timespec tmp1 = {0};
 	if(timespec_compare(&value,&tmp1)<0){
 		printk(KERN_DEBUG "[warning]There exists negtive dmac!\n");
 	}
 	int i;
 	struct inf_info * tmp;
-	//printk(KERN_DEBUG "%s<-1->%s:+:%ld.%ld\n",ether_sprintf_test(mac1),ether_sprintf_test2(mac2),value.tv_sec,value.tv_nsec);
-	//printk(KERN_DEBUG "%s<-2->%s:+:%ld.%ld\n",mac11,mac22,value.tv_sec,value.tv_nsec);
 	for(i=0;i<CS_NUMBER;i++){
                 tmp = (struct inf_info *)&cs[t][i];
 		if( (tmp->value.tv_nsec != 0) && 
@@ -315,7 +310,6 @@ void update_list( unsigned char mac1[6], unsigned char mac2[6],struct timespec  
                 {
                         memcpy(cs[t][i].wlan_src,mac1,MAC_LEN);
                         memcpy(cs[t][i].wlan_dst,mac2,MAC_LEN);
-			printk(KERN_DEBUG "cs[%d][%d],wlan_src=%s,wlan_dst=%s\n",t,i,ether_sprintf_test(cs[t][i].wlan_src),ether_sprintf_test2(cs[t][i].wlan_dst));
                         cs[t][i].value = value;
                         summary[t].inf_num = summary[t].inf_num + 1;
                         return; 
@@ -468,7 +462,6 @@ void divide_inf(struct packet_info sniffer[],struct timespec th, struct timespec
         for (j =current_index[t];;  j=(j-1+HOLD_TIME)%HOLD_TIME){
                 jump = jump +1;
 		if (jump == HOLD_TIME){
-//			printk(KERN_DEBUG "second round traversed all the packets.\n");
 			break;
 		}
 		clear_timespec(&tr);
@@ -523,17 +516,14 @@ void backup_sniffer_packet(struct timespec tw, struct timespec te, int ampdu_typ
 	for (j =current_index[t];; j=(j-1+HOLD_TIME)%HOLD_TIME){
 		jump = jump + 1;
 		if (jump == HOLD_TIME){
-//			printk(KERN_DEBUG "backup all the packets.\n");
 			break; 
 		}
 		clear_timespec(&tr);
                 tr = store[t][j].te;
-//		printk(KERN_DEBUG "[backup][%ld.%ld-- %d -->%ld.%ld] \t [Jump.%d,No.%d] %ld.%ld\n",tw.tv_sec,tw.tv_nsec,ampdu_type,te.tv_sec,te.tv_nsec,jump,j,tr.tv_sec,tr.tv_nsec);
                 if ((timespec_compare(&tr,&tw)>0) && (timespec_compare(&tr ,&te)<0)){
 			backup_store[t][j] = store[t][j];
 		}
 	}
-//	printk(KERN_DEBUG "now current_index come to %d\n",current_index);
 }
 void update_summary_ht(struct timespec dmaci,int len, int num, int t){
 	ht[t]= timespec_add(ht[t],dmaci);
@@ -546,38 +536,6 @@ void update_ht_transmit(int len, int rate,  int t){
 	ht[t]= timespec_add(ht[t],tmp);
 }
 
-int get_last_100ms_phy_rate(struct timespec te,int t){ // NO-LEFT binary search
-	struct timespec tmp1,tmp2 = {0};
-	int i = 0;
-	int left = rate_history_index[t] + 1;
-	int right = left  + HOLD_TIME - 1;
-	i = (left+right)/2;
-	tmp2.tv_sec = 0;
-	tmp2.tv_nsec = 100000000; // 100ms
-	tmp1 = timespec_sub(te,tmp2);
-	while(left<=right){
-		i = (left+right)/2;
-		if(timespec_compare(&tmp1,&rate_history[t][i%HOLD_TIME].te) < 0){
-			right = i-1;
-		}else{
-			left = i+1;
-		}
-	}
-	return rate_history[t][right%HOLD_TIME].phy_rate;
-	
-};
-
-void update_rate_adaption(int len,int last_100ms_rate,int rate,int t){	
-	struct timespec tmp1,tmp2,tmp3 = {0};
-	if(last_100ms_rate < rate)
-		return;
-	tmp1 = cal_transmit_time(len,last_100ms_rate);
-	tmp2 = cal_transmit_time(len,rate);
-	tmp3 = timespec_sub(tmp2,tmp1);
-	clear_timespec(&tmp1);
-	copy_timespec(&tmp1,&summary[t].rate_adaption_time);
-	summary[t].rate_adaption_time = timespec_add(tmp1,tmp3);
-}
 int cal_inf(struct packet_info * p){
         int t; // type of bands
 	t = wap_type(p->dev_name);
@@ -605,15 +563,11 @@ int cal_inf(struct packet_info * p){
 			clear_timespec(&tmp1);
 			tmp1 = timespec_sub(ampdu[t].te,ampdu[t].th);
 			summary[t].overall_extra_time = timespec_add(summary[t].overall_extra_time,tmp1);//overall transmit
-			if(ampdu[t].last_rate != ampdu[t].rate){ //rate adaption
-				update_rate_adaption(ampdu[t].len*ampdu[t].num,ampdu[t].last_rate,ampdu[t].rate,t);
-			}	
 		}
 	}
 	if(p->ampdu == 1){ //first packet of aggregation
 		backup_sniffer_packet(p->tw,p->te,1,t);
 		ampdu[t].rate = p->phy_rate;
-		ampdu[t].last_rate = get_last_100ms_phy_rate(p->te,t);
 		ampdu[t].ifindex = p->ifindex;
 		memcpy(ampdu[t].dev_name,p->dev_name,IFNAMSIZ);
 		copy_timespec(&ampdu[t].te,&p->te);
@@ -643,10 +597,6 @@ int cal_inf(struct packet_info * p){
 		if (timespec_compare(&th,&last_p[t].te)<0){
 			th=last_p[t].te;
 		}
-		int last_100ms_rate = get_last_100ms_phy_rate(p->te,t);
-		if(last_100ms_rate != p->phy_rate){ //rate adaption
-			update_rate_adaption(p->len,last_100ms_rate,p->phy_rate,t);
-		}
     		
 		memcpy(&last_p[t],p,sizeof(last_p[t])); //update previous packet
 		if (p->tw.tv_nsec == 0){
@@ -674,7 +624,6 @@ int cal_inf(struct packet_info * p){
 		check_print(p,t);
 		previous_is_ampdu[t] = p->ampdu; 
 	}
-//	printk(KERN_DEBUG "[  %d  ][%d]:%ld.%ld->%ld.%ld,size=%d,rate=%d,previous_is_ampdu=%d\n",p->ampdu,p->wlan_retry,p->tw.tv_sec,p->tw.tv_nsec,p->te.tv_sec,p->te.tv_nsec,p->len,p->phy_rate,previous_is_ampdu);
 
 }
 

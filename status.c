@@ -960,14 +960,6 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 	getnstimeofday(&ts);
 	ppp[t_hello].te.tv_sec = ts.tv_sec;
 	ppp[t_hello].te.tv_nsec = ts.tv_nsec;
-	if(rate_history_index[t_hello] == HOLD_TIME){
-		rate_history_index[t_hello] = 0;
-	}else{
-		rate_history_index[t_hello] = rate_history_index[t_hello] + 1;
-	}
-	rate_history[t_hello][rate_history_index[t_hello]].te.tv_sec = ts.tv_sec;
-	rate_history[t_hello][rate_history_index[t_hello]].te.tv_nsec = ts.tv_nsec;
-	rate_history[t_hello][rate_history_index[t_hello]].phy_rate = ppp[t_hello].phy_rate;
         //printk(KERN_DEBUG "[mypacket]:%ld.%ld->%ld.%ld,id=%d,offset=%d,len=%d,retry=%d,rate=%d,ampdu=%d,%s\n",ppp[t_hello].tw.tv_sec,ppp[t_hello].tw.tv_nsec,ppp[t_hello].te.tv_sec,ppp[t_hello].te.tv_nsec,ipid,offset,ppp[t_hello].len,ppp[t_hello].wlan_retry,ppp[t_hello].phy_rate,ppp[t_hello].ampdu,ppp[t_hello].dev_name);
 	cal_inf(&ppp[t_hello]);
 	/*wing get the packet info ends*/

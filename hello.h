@@ -105,8 +105,6 @@ extern int t_hello ;
 extern int CONST_TIME[WLAN_NUM];
 extern unsigned char apmac[WLAN_NUM][MAC_LEN];
 
-extern struct rate_history_type rate_history[WLAN_NUM][HOLD_TIME];
-extern int rate_history_index[WLAN_NUM] ;
 /*declaration of function*/
 //extern int parse_80211_header(const unsigned char * buf,  struct packet_info* p);
 //extern int parse_radiotap_header(unsigned char * buf,  struct packet_info* p);

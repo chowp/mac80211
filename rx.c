@@ -505,32 +505,8 @@ int parse_80211_header(struct ieee80211_hdr * wh,struct ieee80211_mgmt* whm,int 
 	}
 	int index = 0;
 	if(str_equal(ether_sprintf_test_rx(apmac[band_type]),ether_sprintf_test_rx2(sa),2*MAC_LEN) == 1){
-		if (current_index[band_type] == HOLD_TIME){
-			current_index[band_type] = 0;
-		}else{
-			current_index[band_type] = current_index[band_type] + 1;
-		}
-		index = current_index[band_type];
-		if (sa != NULL) {
-			memcpy(store[band_type][index].wlan_src, sa, MAC_LEN);
-		}
-		if (da != NULL) {
-			memcpy(store[band_type][index].wlan_dst, da, MAC_LEN);
-		}
 		return 0;
 	}else if(str_equal(ether_sprintf_test_rx(apmac[band_type]),ether_sprintf_test_rx2(da),2*MAC_LEN) == 1 ){
-		if (current_index[band_type] == HOLD_TIME){
-			current_index[band_type] = 0;
-		}else{
-			current_index[band_type] = current_index[band_type] + 1;
-		}
-		index = current_index[band_type];
-		if (sa != NULL) {
-			memcpy(store[band_type][index].wlan_src, sa, MAC_LEN);
-		}
-		if (da != NULL) {
-			memcpy(store[band_type][index].wlan_dst, da, MAC_LEN);
-		}
 		return 0;
 	}else{
 		if (current_index[band_type] == HOLD_TIME){
@@ -669,7 +645,7 @@ ieee80211_rx_monitor(struct ieee80211_local *local, struct sk_buff *origskb,
 	int index_pch = 0;
 	if (skb->dev ){
 		t_hello = mon_type(skb->dev->name);
-		if (parse_80211_header(hdr,whm,t_hello) == 0){	
+		if (parse_80211_header(hdr,whm,t_hello) == 1){	
 			index_pch = current_index[t_hello];
 			memcpy(store[t_hello][index_pch].dev_name,skb->dev->name,IFNAMSIZ);
 			store[t_hello][index_pch].ifindex = skb->dev->ifindex;
@@ -685,7 +661,7 @@ ieee80211_rx_monitor(struct ieee80211_local *local, struct sk_buff *origskb,
 			else{
 				store[t_hello][index_pch].phy_rate=rate->bitrate;
 			}
-			printk(KERN_DEBUG "[current_index]dev=%s,type=%d,%ld.%ld,%ld,%ld,wlan_src=%s,wlan_dst=%s\n",skb->dev->name,t_hello,ktime_to_timespec(skb->tstamp).tv_sec,ktime_to_timespec(skb->tstamp).tv_nsec,ts.tv_sec,ts.tv_nsec,ether_sprintf_test_rx(store[t_hello][index_pch].wlan_src),ether_sprintf_test_rx2(store[t_hello][index_pch].wlan_dst));
+		//	printk(KERN_DEBUG "[current_index]dev=%s,type=%d,%ld.%ld,%ld,%ld,wlan_src=%s,wlan_dst=%s\n",skb->dev->name,t_hello,ktime_to_timespec(skb->tstamp).tv_sec,ktime_to_timespec(skb->tstamp).tv_nsec,ts.tv_sec,ts.tv_nsec,ether_sprintf_test_rx(store[t_hello][index_pch].wlan_src),ether_sprintf_test_rx2(store[t_hello][index_pch].wlan_dst));
 		}
 	}else{
 		printk(KERN_DEBUG "This packet from unkonw sniffer devicess!\n");
