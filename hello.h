@@ -8,7 +8,7 @@
 #define MAC_LEN			6
 #define IFNAMSIZ		16
 #define HOLD_TIME       500
-#define CS_NUMBER       10
+#define CS_NUMBER       200
 //#define CONST_TIME_24   0 //70
 //#define CONST_TIME_5    0 //76    //50+16+32Byte*8/24Mbps   
 #define NUM_MICROS_PER_SECOND 1e6
@@ -25,9 +25,10 @@
 #define PHY_FLAG_MODE_MASK	0x00f0
 
 const static char mac_zero[12] = "000000000000";
-const static char mac_ffff[12] = "FFFFFFFFFFFF";
+const static char mac_FFFF[12] = "FFFFFFFFFFFF";
+const static char mac_ffff[12] = "ffffffffffff";
 
-static int FREQUENT_UPDATE_PERIOD_SECONDS = 60;
+static int FREQUENT_UPDATE_PERIOD_SECONDS = 5;
 //int tolower(char c){
 //	return c-'A' + 'a';
 //}
@@ -51,6 +52,7 @@ struct summary_info{
 	struct timespec  overall_busywait;
 	struct timespec  rate_adaption_time;
 	int inf_num;
+	int wing;
 };
 struct packet_info {
 	/* general */
@@ -94,6 +96,7 @@ extern struct packet_info backup_store[WLAN_NUM][HOLD_TIME];
 extern int current_index[WLAN_NUM] ;
 extern int previous_is_ampdu[WLAN_NUM] ;
 extern struct inf_info cs[WLAN_NUM][CS_NUMBER]; 
+extern struct inf_info lccs_client[WLAN_NUM][CS_NUMBER];
 extern struct summary_info summary[WLAN_NUM];
 extern struct packet_info last_p[WLAN_NUM];
 extern struct packet_info ppp[WLAN_NUM];
@@ -104,7 +107,7 @@ extern struct mpdu ampdu[WLAN_NUM];
 extern int t_hello ;
 extern int CONST_TIME[WLAN_NUM];
 extern unsigned char apmac[WLAN_NUM][MAC_LEN];
-
+extern struct timespec lasttw_for_retry[WLAN_NUM];
 /*declaration of function*/
 //extern int parse_80211_header(const unsigned char * buf,  struct packet_info* p);
 //extern int parse_radiotap_header(unsigned char * buf,  struct packet_info* p);
@@ -113,3 +116,5 @@ int mcs_index_to_rate(int mcs,int ht20, int lgi);
 int wap_type(char test[]);
 int mon_type(char test[]);
 int str_equal(char *s1, char *s2,int len);
+void update_list_lccs( unsigned char mac1[6], unsigned char mac2[6],struct timespec  value,int t);
+void copy_timespec(struct timespec * dst, struct timespec * src);

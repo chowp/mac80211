@@ -12,10 +12,12 @@ struct packet_info backup_store[WLAN_NUM][HOLD_TIME] = {0};
 int current_index[WLAN_NUM] = {0} ;
 int previous_is_ampdu[WLAN_NUM] = {0};
 struct inf_info cs[WLAN_NUM][CS_NUMBER] = {0}; /* used to store cs info in time gamma */
+struct inf_info lccs_client[WLAN_NUM][CS_NUMBER] = {0};
 struct summary_info summary[WLAN_NUM]= {0};
 struct packet_info last_p[WLAN_NUM]={0};
 struct packet_info ppp[WLAN_NUM]= {0};
 struct timespec  ht[WLAN_NUM] = {0};
+struct timespec lasttw_for_retry[WLAN_NUM] = {0};
 struct timespec  inf_start_timestamp = {0};
 struct timespec  inf_end_timestamp  = {0};
 struct mpdu ampdu[WLAN_NUM]={0};
@@ -244,7 +246,7 @@ int str_equal(char *s1,char *s2,int len){
         int i ;
         for (i = 0; i < len ; i++)
         {
-                if(( s1[i] != s2[i] )&&(tolower(s1[i]) != s2[i]))
+                if( tolower(s1[i]) != tolower(s2[i]) )
                         return 0;
         }
         return 1;
@@ -256,6 +258,8 @@ To judge whether the current packet are broadcast, cts, ack or control packet(\g
 bool control_address(char mac1[13]){
  	if (str_equal(mac_zero,mac1,2*MAC_LEN) == 1)
                 return true;
+ 	if (str_equal(mac_FFFF,mac1,2*MAC_LEN) == 1)
+                return true;
  	if (str_equal(mac_ffff,mac1,2*MAC_LEN) == 1)
                 return true;
         return false;
@@ -263,25 +267,65 @@ bool control_address(char mac1[13]){
 /*
 To check whether the current packet is in the cs list(\gamma)
 */
-bool matched(char src[13], char dst[13], char  mac1[13],char mac2[13]){
+bool matched(char src[13], char dst[13], char  mac1[13],char mac2[13],int t){
 	if ( (str_equal(mac_zero,mac1,2*MAC_LEN) == 1) &&
            (str_equal(mac_zero,mac2,2*MAC_LEN) == 1) )
                 return false;    // not vavid data
 	if ((control_address(mac1) == 1) &&
 	   (  (str_equal(mac2,src,2*MAC_LEN) == 1)||(str_equal(mac2,dst,2*MAC_LEN) == 1) ))
+	{
 		return true;
+	}
 	if ((control_address(mac2) == 1) &&
 	   (  (str_equal(mac1,src,2*MAC_LEN) == 1)||(str_equal(mac1,dst,2*MAC_LEN) == 1) ))
+	{
 		return true;
+	}
 	
 	
 	if ( (str_equal(mac1,src,2*MAC_LEN) == 1) &&
            (str_equal(mac2,dst,2*MAC_LEN) == 1) )
-                return true;
+	{
+		return true;
+	}
         if ( (str_equal(mac1,dst,2*MAC_LEN) == 1) &&
            (str_equal(mac2,src,2*MAC_LEN) == 1) )
-                return true;
+	{
+		return true;
+	}
         return false;
+}
+/*
+Insert a packet to the carrier sense or hidden teriminal list
+*/
+void update_list_lccs( unsigned char mac1[6], unsigned char mac2[6],struct timespec  value,int t){
+	struct timespec tmp1 = {0};
+	if(timespec_compare(&value,&tmp1)<0){
+		printk(KERN_DEBUG "[warning]There exists negtive dmac!\n");
+	}
+	int i;
+	struct inf_info * tmp;
+	for(i=0;i<CS_NUMBER;i++){
+                tmp = (struct inf_info *)&lccs_client[t][i];
+		if( (tmp->value.tv_nsec != 0) && 
+                    (matched(ether_sprintf_test3(tmp->wlan_src),ether_sprintf_test4(tmp->wlan_dst),ether_sprintf_test(mac1),ether_sprintf_test2(mac2),t) == true) ){
+			tmp->value = timespec_add(tmp->value,value);
+			return;
+                }
+        }
+        // there is no match!!
+        for(i=0;i<CS_NUMBER;i++)
+        {
+                tmp = (struct inf_info *)&lccs_client[t][i];
+                if( (lccs_client[t][i].value.tv_nsec == 0 ) && (control_address(ether_sprintf_test(mac1))== 0)&& (control_address(ether_sprintf_test2(mac2))== 0))
+                {
+                        memcpy(lccs_client[t][i].wlan_src,mac1,MAC_LEN);
+                        memcpy(lccs_client[t][i].wlan_dst,mac2,MAC_LEN);
+                        lccs_client[t][i].value = value;
+			summary[t].inf_num = summary[t].inf_num + 2;
+                        return; 
+                }
+        }
 }
 /*
 Insert a packet to the carrier sense or hidden teriminal list
@@ -296,8 +340,7 @@ void update_list( unsigned char mac1[6], unsigned char mac2[6],struct timespec  
 	for(i=0;i<CS_NUMBER;i++){
                 tmp = (struct inf_info *)&cs[t][i];
 		if( (tmp->value.tv_nsec != 0) && 
-		   // (non_control_packet(ether_sprintf_test(mac1),ether_sprintf_test2(mac2)) == true) &&
-                    (matched(ether_sprintf_test3(tmp->wlan_src),ether_sprintf_test4(tmp->wlan_dst),ether_sprintf_test(mac1),ether_sprintf_test2(mac2)) == true) ){
+                    (matched(ether_sprintf_test3(tmp->wlan_src),ether_sprintf_test4(tmp->wlan_dst),ether_sprintf_test(mac1),ether_sprintf_test2(mac2),t) == true) ){
                        tmp->value = timespec_add(tmp->value,value);
 			return;
                 }
@@ -306,12 +349,11 @@ void update_list( unsigned char mac1[6], unsigned char mac2[6],struct timespec  
         for(i=0;i<CS_NUMBER;i++)
         {
                 tmp = (struct inf_info *)&cs[t][i];
-                if( (cs[t][i].value.tv_nsec == 0 ) && (control_address(ether_sprintf_test(mac1))== 0)&& (control_address(ether_sprintf_test2(mac2))))
+                if( (cs[t][i].value.tv_nsec == 0 ) && (control_address(ether_sprintf_test(mac1))== 0)&& (control_address(ether_sprintf_test2(mac2))== 0))
                 {
                         memcpy(cs[t][i].wlan_src,mac1,MAC_LEN);
                         memcpy(cs[t][i].wlan_dst,mac2,MAC_LEN);
                         cs[t][i].value = value;
-                        summary[t].inf_num = summary[t].inf_num + 1;
                         return; 
                 }
         }
@@ -344,8 +386,14 @@ static void reset_summary(int t){
         summary[t].rate_adaption_time.tv_sec = 0;
         summary[t].rate_adaption_time.tv_nsec = 0;
         summary[t].sniffer_bytes = 0;
+        summary[t].wing = 0;
 }
-
+int timespec_div(struct timespec nume, struct timespec deno){
+	unsigned long tmp1= (unsigned long)(nume.tv_sec*1000000)+(unsigned long)(nume.tv_nsec/1000);
+	unsigned long tmp2= (unsigned long)(deno.tv_sec*1000000)+(unsigned long)(deno.tv_nsec/1000);
+	return (int)((tmp1*1000)/tmp2);
+	
+}
 static void print_inf(int t) {
         int j;
 	if(t == W2G){
@@ -366,6 +414,17 @@ static void print_inf(int t) {
         }
 
         printk(KERN_DEBUG "\nHT:%ld second(s) + %ld nanoseconds\n",ht[t].tv_sec,ht[t].tv_nsec);
+	printk(KERN_DEBUG "Station:%d\n",summary[t].inf_num);
+	int inf = timespec_div(timespec_add(summary[t].overall_busywait,ht[t]),summary[t].overall_extra_time);
+	printk(KERN_DEBUG "Wing-summary:%d\n",inf);
+	int wing_cs_avg = summary[t].wing/summary[t].mine_packets;
+	int wing_ht = timespec_div(ht[t],summary[t].overall_extra_time);
+	printk(KERN_DEBUG "Wing-average:%d\n",(wing_cs_avg+wing_ht)/2);
+	int delay = (summary[t].overall_extra_time.tv_sec*1000+summary[t].overall_extra_time.tv_nsec/1000000)*1000/summary[t].mine_bytes;
+	printk(KERN_DEBUG "Delay-summary:%d ms/KB\n",delay);
+	if(t == W5G){
+		printk(KERN_DEBUG "-------WING_ENDS-------\n");
+	}
 	//checkpoint
 	struct timespec tmp1,tmp2 ={0};
 	tmp1 = timespec_add(summary[t].overall_busywait,ht[t]); 
@@ -414,7 +473,6 @@ struct timespec cal_dmaci_ampdu(int t){
 		dmaci.tv_sec = 0;
 		dmaci.tv_nsec = 0;
 	}
-	printk(KERN_DEBUG "[ampdu,%ld.%ld]%ld.%ld,%d,%ld.%ld,%ld.%ld,ifindex=%d,%s,num=%d,size=%d,retry=%d\n",ts_tmp.tv_sec,ts_tmp.tv_nsec,ampdu[t].te.tv_sec,ampdu[t].te.tv_nsec,ampdu[t].rate,dmaci.tv_sec,dmaci.tv_nsec,tmp1.tv_sec,tmp1.tv_nsec,ampdu[t].ifindex,ampdu[t].dev_name,ampdu[t].num,ampdu[t].len,ampdu[t].retry);
 	return dmaci;
 }
 
@@ -499,7 +557,8 @@ void check_print(struct packet_info *p,int t){
                 print_inf(W5G);
 		//print_summary();
 		memset(cs,0,sizeof(cs));
-                ht[0].tv_sec = 0;
+                memset(lccs_client,0,sizeof(lccs_client));
+		ht[0].tv_sec = 0;
 		ht[0].tv_nsec = 0;
                 ht[1].tv_sec = 0;
 		ht[1].tv_nsec = 0;
@@ -554,15 +613,19 @@ int cal_inf(struct packet_info * p){
 	if (previous_is_ampdu[t] != 0){
 		if (p->ampdu != 2){
 			dmaci = cal_dmaci_ampdu(t);
-                	if (ampdu[t].retry == ampdu[t].num){ // all packets are retried packets
+                	if (ampdu[t].retry > 0){ // all packets are retried packets
 				update_summary_ht(dmaci,ampdu[t].len*ampdu[t].num,ampdu[t].num,t);
 			}else{
 				divide_inf(backup_store[t],ampdu[t].th,ampdu[t].te,dmaci,0,1,t);
-				update_summary_cs(dmaci,ampdu[t].len*ampdu[t].num,ampdu[t].num,t);//overall busywait
+				update_summary_cs(dmaci,ampdu[t].len*ampdu[t].num,1,t);//overall busywait, ampdu regards as one
 			}
 			clear_timespec(&tmp1);
 			tmp1 = timespec_sub(ampdu[t].te,ampdu[t].th);
 			summary[t].overall_extra_time = timespec_add(summary[t].overall_extra_time,tmp1);//overall transmit
+			summary[t].wing = summary[t].wing + timespec_div(dmaci,tmp1);
+			printk(KERN_DEBUG "[ampdu,%ld.%ld]%ld.%ld,%d,%ld.%ld,%ld.%ld,ifindex=%d,%s,num=%d,size=%d,retry=%d\n",ampdu[t].tw.tv_sec,ampdu[t].tw.tv_nsec,ampdu[t].te.tv_sec,ampdu[t].te.tv_nsec,ampdu[t].rate,dmaci.tv_sec,dmaci.tv_nsec,tmp1.tv_sec,tmp1.tv_nsec,ampdu[t].ifindex,ampdu[t].dev_name,ampdu[t].num,ampdu[t].len,ampdu[t].retry);
+			//clear the ampdu structure
+			memset(&ampdu[t],0,sizeof(ampdu[t]));
 		}
 	}
 	if(p->ampdu == 1){ //first packet of aggregation
@@ -577,17 +640,15 @@ int cal_inf(struct packet_info * p){
 		ampdu[t].len = p->len;
     		memcpy(&last_p[t],p,sizeof(last_p[t]));// update last p
 		check_print(p,t);
-                if (p->wlan_retry == 1){
-			ampdu[t].retry = 1;
-			update_ht_transmit(p->len,p->phy_rate,t);
+                if (p->wlan_retry > 0){
+			ampdu[t].retry = p->wlan_retry;
 		}
        		previous_is_ampdu[t] = p->ampdu; 
 	}else if(p->ampdu==2){ //rest of packets of aggregation
 		p->phy_rate = ampdu[t].rate;
 		copy_timespec(&ampdu[t].tw,&p->tw);
 		ampdu[t].num = ampdu[t].num +  1;
-                if (p->wlan_retry == 1){
-			ampdu[t].retry = ampdu[t].retry + 1;
+                if ( p->wlan_retry >= 1){
 			update_ht_transmit(p->len,p->phy_rate,t);
 		}
 	}else{
@@ -609,7 +670,6 @@ int cal_inf(struct packet_info * p){
 		tmp1 = timespec_sub(p->te,th);
 		tmp2 = timespec_sub(tmp1,transmit);
 		dmaci = timespec_sub(tmp2,difs);
-		printk(KERN_DEBUG "[unampdu]%ld.%ld,%d,%ld.%ld,%ld.%ld,ifindex=%d,%s,num=%d,size=%d,retry=%d\n",p->te.tv_sec,p->te.tv_nsec,p->phy_rate,dmaci.tv_sec,dmaci.tv_nsec,tmp1.tv_sec,tmp1.tv_nsec,p->ifindex,p->dev_name,1,p->len,p->wlan_retry);
 		if (dmaci.tv_sec < 0 || dmaci.tv_nsec < 0){
 			dmaci.tv_sec = 0;
 			dmaci.tv_nsec = 0;
@@ -621,6 +681,9 @@ int cal_inf(struct packet_info * p){
 			update_summary_ht(dmaci,p->len,1,t);
 		}
 		summary[t].overall_extra_time = timespec_add(summary[t].overall_extra_time,tmp1);
+		summary[t].wing = summary[t].wing + timespec_div(dmaci,tmp1);
+		printk(KERN_DEBUG "[unampdu,%ld.%ld]%ld.%ld,%d,%ld.%ld,%ld.%ld,ifindex=%d,%s,num=%d,size=%d,retry=%d\n",p->tw.tv_sec,p->tw.tv_nsec,p->te.tv_sec,p->te.tv_nsec,p->phy_rate,dmaci.tv_sec,dmaci.tv_nsec,tmp1.tv_sec,tmp1.tv_nsec,p->ifindex,p->dev_name,1,p->len,p->wlan_retry);
+		
 		check_print(p,t);
 		previous_is_ampdu[t] = p->ampdu; 
 	}

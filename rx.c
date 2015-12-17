@@ -647,6 +647,10 @@ ieee80211_rx_monitor(struct ieee80211_local *local, struct sk_buff *origskb,
 		t_hello = mon_type(skb->dev->name);
 		if (parse_80211_header(hdr,whm,t_hello) == 1){	
 			index_pch = current_index[t_hello];
+			struct timespec tmp;
+			tmp.tv_sec = 0;
+			tmp.tv_nsec = 100;
+			update_list_lccs(store[t_hello][index_pch].wlan_src,store[t_hello][index_pch].wlan_dst,tmp,t_hello);
 			memcpy(store[t_hello][index_pch].dev_name,skb->dev->name,IFNAMSIZ);
 			store[t_hello][index_pch].ifindex = skb->dev->ifindex;
 			struct timespec ts;

@@ -960,7 +960,11 @@ void ieee80211_tx_status(struct ieee80211_hw *hw, struct sk_buff *skb)
 	getnstimeofday(&ts);
 	ppp[t_hello].te.tv_sec = ts.tv_sec;
 	ppp[t_hello].te.tv_nsec = ts.tv_nsec;
-        //printk(KERN_DEBUG "[mypacket]:%ld.%ld->%ld.%ld,id=%d,offset=%d,len=%d,retry=%d,rate=%d,ampdu=%d,%s\n",ppp[t_hello].tw.tv_sec,ppp[t_hello].tw.tv_nsec,ppp[t_hello].te.tv_sec,ppp[t_hello].te.tv_nsec,ipid,offset,ppp[t_hello].len,ppp[t_hello].wlan_retry,ppp[t_hello].phy_rate,ppp[t_hello].ampdu,ppp[t_hello].dev_name);
+	if( (ppp[t_hello].ampdu == 2) && (timespec_compare(&lasttw_for_retry,&ppp[t_hello].tw) >  0)){
+		ppp[t_hello].wlan_retry = 1;	
+        	//printk(KERN_DEBUG "[mypacket]:%ld.%ld->%ld.%ld,id=%d,offset=%d,len=%d,retry=%d,rate=%d,ampdu=%d,%s\n",ppp[t_hello].tw.tv_sec,ppp[t_hello].tw.tv_nsec,ppp[t_hello].te.tv_sec,ppp[t_hello].te.tv_nsec,ipid,offset,ppp[t_hello].len,ppp[t_hello].wlan_retry,ppp[t_hello].phy_rate,ppp[t_hello].ampdu,ppp[t_hello].dev_name);
+	}
+	copy_timespec(&lasttw_for_retry[t_hello],&ppp[t_hello].tw);
 	cal_inf(&ppp[t_hello]);
 	/*wing get the packet info ends*/
 	/* XXX: is this sufficient for BPF? */
